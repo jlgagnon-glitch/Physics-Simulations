@@ -110,6 +110,13 @@ the last try or after the due date). Before then, the question only shows the st
   three-significant-figure rounding along the way. Use `0.01` to be stricter.
 - `mode=solution` (used in the Detailed Solution) shows only the picture and launches the correct
   answer on its own, so put it only where students see it after answering.
+- `mode=show` (used in the question) plays the correct launch with every answer value hidden. Once the
+  student submits, the last three Common Control lines add their answer to the link (`launch=`), and the
+  simulation plays the correct launch and then theirs, with ON TARGET or MISS. Students with several tries
+  can use that feedback before trying again. To give no feedback at all, use the still picture instead:
+  replace `$simurl` in the Question Text with the same link ending in `mode=test`.
+- If the student's launch never appears after submitting, check the `getstuans` line in Common Control.
+  It reads the submitted answer, and `$stuanswers[$thisq]` is the older way to write it.
 - `mode=test` in the link shows only the picture: no answer box, no Launch button, no feedback.
   To let students launch and watch their own answer before submitting, remove `&mode=test`. To also
   hide the worked solution in that case, add `&solution=0`.
@@ -132,14 +139,21 @@ link, the full game opens as usual.
 
 
 def block(code, name, keys, sym, unit, word, control, story):
-    ctl = "\n".join(control + ["$reltolerance = 0.02"])
     q = "&".join(f"{k}=${k}" for k in keys)
     src = f"{SITE}?level={code}&{q}&mode=test"
+    show = f"{SITE}?level={code}&{q}&mode=show"
+    ctl = "\n".join(control + [
+        "$reltolerance = 0.02",
+        "$stua = getstuans($stuanswers, $thisq)",
+        f'$simurl = "{show}"',
+        '$simurl = $simurl . "&launch=$stua" if ($stua != "")',
+    ])
     text = (
         f'<div style="max-width:820px">\n'
-        f'<iframe src="{src}" title="Physics Proving Ground: {name}" loading="lazy" '
+        f'<iframe src="$simurl" title="Physics Proving Ground: {name}" loading="lazy" '
         f'style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>\n'
-        f'<p style="font-size:85%"><a href="{src}" target="_blank" rel="noopener">Open the simulation in a new tab</a></p>\n'
+        f'<p style="font-size:85%">The simulation shows a correct launch, with the answer hidden. After you submit, it also shows your launch. '
+        f'Tap it to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>\n'
         f"</div>\n"
         f"<p>{story}</p>\n"
         f"<p>Use g = 9.8 m/s². Enter the {word} in {unit}, to three significant figures.</p>\n"

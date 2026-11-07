@@ -137,6 +137,7 @@ const within = (got, want, frac) => Math.abs(got - want) <= frac * want;
 const hillAt = (xr, s, deg) => { const a = deg * RAD; return s <= 0 ? [xr + s, 0, 0] : [xr + s * Math.cos(a), s * Math.sin(a), a * clamp(s / .2, 0, 1)]; };
 
 /* ---------- the levels. sim() must also work with v = 0, which draws the setup before a launch. ---------- */
+let HIDE = false;   // true while showing the correct launch to a student who has not answered yet: no answer values anywhere
 const CHAPTERS = ['Motion', 'Forces', 'Energy', 'Rotation'];
 const LEVELS = [
 {ch:0, name:'Off the bench', sym:'v', unit:'m/s', word:'launch speed',
@@ -216,7 +217,7 @@ const LEVELS = [
         // the rope leaves the crate at mid-height and runs level to the top of the pulley, then straight down
         const sc = D.y(0) - D.y(1), bh = Math.max(18, sc * .2) / sc, rope = y + bh / 2, r = .09, cx = q, px2 = ex + Math.max(.1, 11 / sc), py = rope - r, hx = px2 + r, hy = y - .25 - q;
         D.string(cx, rope, px2, rope); D.string(hx, py, hx, hy); D.arm(ex, y, px2, py); D.pulley(px2, py, r);
-        D.block(cx, y, .34, .2); D.block(hx, hy - bh, .2, .2, M ? `${f(M)} kg` : 'M');
+        D.block(cx, y, .34, .2); D.block(hx, hy - bh, .2, .2, M && !HIDE ? `${f(M)} kg` : 'M');
         D.force(cx, rope, 1, 0, 'T'); return [`t ${f(t)} s`, `x ${f(q)} m`, `v ${f(a * t)} m/s`]; }}; },
   steps:(p, A) => { const a = 2 * p.d / (p.t * p.t); return [`Needed acceleration: <span class="m">a = 2d/t² = 2·${p.d}/${p.t}² = ${f(a)} m/s²</span>`, `Forces on both masses: <span class="m">Mg = (M + m)a</span>`, `Solve for M: <span class="m">M = ma/(g − a) = ${p.m}·${f(a)}/(9.8 − ${f(a)}) = ${f(A)} kg</span>`]; }},
 
@@ -338,12 +339,16 @@ const LINK = (() => {
 const MODE = (URLQ.get('mode') || '').toLowerCase();
 const TEST = !!LINK && MODE === 'test';             // picture of the setup only; students answer elsewhere
 const SOLN = !!LINK && MODE === 'solution';         // picture only, launching the correct answer on its own; tap to replay
-const BARE = TEST || SOLN;
+const SHOW = !!LINK && MODE === 'show';            // correct launch with the answer hidden, then the student's own launch if the link has one
+const STU = parseFloat(URLQ.get('launch'));          // the student's answer, passed in by MyOpenMath after they submit
+const HAS_STU = SHOW && isFinite(STU) && STU > 0;
+const BARE = TEST || SOLN || SHOW;
+if (SHOW) HIDE = true;
 const NOSOL = URLQ.get('solution') === '0';         // never show the worked solution
 const LOCK = !!LINK;                                // one level, numbers fixed by the link
 if (LOCK) $('app').classList.add('locked');
 if (BARE){ document.documentElement.classList.add('bare'); $('app').classList.add('bare'); }
-if (SOLN){ $('scene').style.cursor = 'pointer'; $('scene').title = 'Tap to replay'; }
+if (SOLN || SHOW){ $('scene').style.cursor = 'pointer'; $('scene').title = 'Tap to replay'; }
 if (LOCK){ $('btnFresh').hidden = true; $('btnNext').hidden = true; }
 if (NOSOL) $('btnSolve').hidden = true;
 
@@ -353,7 +358,7 @@ const store = {
   set(k, v){ if (LOCK) return; try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
 };
 let best = store.get('proving-ground-best', {});   // level index -> stars; -1 means finished with the worked solution
-const S = {cur:0, p:null, tries:0, helped:false, solved:false, run:null, shown:null, last:null, strobe:[], fx:[], banner:null, lastD:null};
+const S = {cur:0, phase:'target', p:null, tries:0, helped:false, solved:false, run:null, shown:null, last:null, strobe:[], fx:[], banner:null, lastD:null};
 
 const cv = $('scene'), ctx = cv.getContext('2d');
 let W = 640, H = 360;
@@ -479,7 +484,7 @@ function makeDraw(view){
       let step = 1; for (const s of [1, 2, 5, 10, 20]){ step = s; if (px(s) >= 46) break; }
       const rule = lv().ch >= 2 ? '#e4eaf0' : 'rgba(10,14,20,.85)'; ctx.strokeStyle = ctx.fillStyle = rule; ctx.lineWidth = 1.5; line(0, gy, W, gy);
       ctx.font = '600 11px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'center';
-      for (let m = Math.ceil(x0 / step) * step; m <= x1 + .01; m += step){ line(X(m), gy, X(m), gy + 6); ctx.fillText(`${m}`, X(m), gy + 17); }
+      for (let m = Math.ceil(x0 / step) * step; m <= x1 + .01; m += step){ line(X(m), gy, X(m), gy + 6); if (!HIDE) ctx.fillText(`${m}`, X(m), gy + 17); }
     },
     bench(a, b, h){
       D.ground(); shadowFrom = b;
@@ -642,7 +647,7 @@ function paint(sim, t){
   ctx.globalAlpha = 1;
   const D = makeDraw(lv().view(S.p)), rd = sim.draw(t, D);
   ctx.font = '600 14px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'left';
-  const s = TEST ? lv().name : rd.join('   '), w = ctx.measureText(s).width;   // in test mode the readout would only show zeros
+  const s = TEST || HIDE ? lv().name : rd.join('   '), w = ctx.measureText(s).width;   // test mode would only show zeros; the target run must not show values
   ctx.fillStyle = 'rgba(10,14,20,.72)'; ctx.fillRect(8, 8, w + 20, 28);
   ctx.fillStyle = '#7dffc1'; ctx.fillText(s, 18, 27);
   if (SOLN){   // name the launch value, and how to see it again
@@ -650,6 +655,13 @@ function paint(sim, t){
     ctx.font = '600 14px "IBM Plex Mono", Menlo, monospace'; const tw = ctx.measureText(tag).width;
     ctx.fillStyle = 'rgba(10,14,20,.72)'; ctx.fillRect(W - tw - 28, 8, tw + 20, 28); ctx.fillStyle = '#ffb46b'; ctx.fillText(tag, W - tw - 18, 27);
     if (!S.run && S.tries){ ctx.font = '600 13px "IBM Plex Mono", Menlo, monospace'; const h2 = 'Tap to replay', hw = ctx.measureText(h2).width; ctx.fillStyle = 'rgba(10,14,20,.72)'; ctx.fillRect(W - hw - 28, 42, hw + 20, 24); ctx.fillStyle = '#eaf0f4'; ctx.fillText(h2, W - hw - 18, 59); }
+  }
+  if (SHOW){
+    const L = lv(), mine = HAS_STU && S.phase !== 'target', tag = mine ? `Your answer: ${L.sym} = ${f(S.last)} ${L.unit}` : 'Target run: the correct launch';
+    ctx.font = '600 14px "IBM Plex Mono", Menlo, monospace'; const tw = ctx.measureText(tag).width;
+    ctx.fillStyle = 'rgba(10,14,20,.78)'; ctx.fillRect(W - tw - 28, 8, tw + 20, 28); ctx.fillStyle = mine ? '#ffb46b' : '#eaf0f4'; ctx.fillText(tag, W - tw - 18, 27);
+    if (mine && !S.run && S.yourMiss){ ctx.font = '600 14px "IBM Plex Sans", system-ui, sans-serif'; const mw = ctx.measureText(S.yourMiss).width; ctx.fillStyle = 'rgba(10,14,20,.82)'; ctx.fillRect(8, 42, mw + 20, 26); ctx.fillStyle = '#ff8b7a'; ctx.fillText(S.yourMiss, 18, 60); }
+    if (!S.run && S.phase === 'done'){ ctx.font = '600 13px "IBM Plex Mono", Menlo, monospace'; const h2 = 'Tap to replay', hw = ctx.measureText(h2).width; ctx.fillStyle = 'rgba(10,14,20,.72)'; ctx.fillRect(W - hw - 28, 42, hw + 20, 24); ctx.fillStyle = '#eaf0f4'; ctx.fillText(h2, W - hw - 18, 59); }
   }
   for (const f2 of S.fx){ ctx.globalAlpha = clamp(f2.life, 0, 1); ctx.fillStyle = f2.c; ctx.fillRect(f2.x - f2.s / 2, f2.y - f2.s / 2, f2.s, f2.s); }
   ctx.globalAlpha = 1;
@@ -665,6 +677,7 @@ function paint(sim, t){
 function celebrate(sim){
   const hitp = S.lastD && S.lastD.moving, cx = hitp ? hitp[0] : W / 2, cy = hitp ? hitp[1] : H / 2;
   S.banner = {text:sim.hit ? 'ON TARGET' : 'MISS', c:sim.hit ? '#7dffc1' : '#ff8b7a', until:performance.now() + 1900};
+  if (SHOW && S.phase === 'target') S.banner = {text:'TARGET', c:'#eaf0f4', until:performance.now() + 1200};
   if (!reduceMotion){
     const n = sim.hit ? 46 : 16;
     for (let i = 0; i < n; i++){
@@ -778,6 +791,7 @@ function finish(sim){
   }
   box.hidden = false; renderNav(); celebrate(sim);
   if (!BARE) box.scrollIntoView({block:'nearest', behavior:reduceMotion ? 'auto' : 'smooth'});
+  if (SHOW) showNext(sim);
 }
 function showSteps(){
   $('steps').innerHTML = lv().steps(S.p, lv().ans(S.p)).map(s => `<li>${s}</li>`).join('');
@@ -790,12 +804,33 @@ $('btnNext').onclick = () => { if (!LOCK) loadLevel(S.cur + 1); };
 new ResizeObserver(resize).observe($('range'));
 addEventListener('resize', resize);
 
+/* ---------- show mode: the correct launch with values hidden, then the student's launch ---------- */
+function showStart(){
+  S.waiting = false; S.phase = 'target'; S.yourMiss = ''; HIDE = true;
+  $('ans').value = lv().ans(S.p).toPrecision(6); launch();
+}
+function showNext(sim){
+  if (S.phase === 'target' && HAS_STU){
+    S.waiting = true;
+    setTimeout(() => { S.waiting = false; HIDE = false; S.phase = 'yours'; $('ans').value = String(STU); launch(); }, 1600);
+    return;
+  }
+  if (S.phase === 'yours') S.yourMiss = sim.hit ? '' : sim.miss;
+  HIDE = false; S.phase = 'done';
+  if (!HAS_STU) HIDE = true;   // keep the axis numbers and labels hidden after a target-only run
+  paint(S.shown.sim, S.shown.t);
+}
+
 /* ---------- boot ---------- */
 function start(){
   resize();
   if (LINK){ S.p = LINK.p; loadLevel(LINK.i, false); }
   else { const cur = store.get('proving-ground-cur', 0); loadLevel(LEVELS[cur] ? cur : 0); }
   if (document.fonts?.ready) document.fonts.ready.then(() => { if (S.shown && !S.run) paint(S.shown.sim, S.shown.t); });
+  if (SHOW){
+    $('scene').addEventListener('click', () => { if (!S.run && !S.waiting) showStart(); });
+    S.waiting = true; setTimeout(showStart, 900);   // a moment to take in the setup first
+  }
   if (SOLN){
     const go = () => { if (S.run) return; $('ans').value = lv().ans(S.p).toPrecision(6); launch(); };
     $('scene').addEventListener('click', go);
