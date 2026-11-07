@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Physics Proving Ground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=IBM+Plex+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: a live view of the outdoor test site on the left, the control desk (mission, input, debrief) on the right. One deliberate look. */
+:root{
+  --paper:#18212b; --sheet:#222e3b; --rule:#3d4d5e;
+  --ink:#eaf0f4; --muted:#a9b6c2; --steel-lt:#6d7d8c;
+  --safety:#ff8a2a; --hit:#7dffc1; --miss:#ff8b7a; --field:#0f161e; --on-safety:#20140a;
+  --f-display:"Saira Stencil One", Impact, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+[hidden]{display:none!important}   /* hidden panels must never cover the range */
+table{color:inherit; font-size:inherit; font-weight:inherit; font-style:inherit; line-height:inherit}
+*{box-sizing:border-box}
+body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--f-body); font-size:16px; line-height:1.45}
+button,input{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--safety); outline-offset:2px}
+
+.app{height:100%; display:grid; grid-template-rows:auto minmax(0,1fr); grid-template-columns:minmax(0,1fr) 370px; gap:10px 16px;
+  padding-block:10px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px))}
+header{grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:6px 18px}
+h1{margin:0; font-family:var(--f-display); font-weight:400; font-size:30px; line-height:1; color:var(--ink); letter-spacing:.02em}
+.nav{display:flex; flex-wrap:wrap; gap:6px 14px; flex:1; min-width:0}
+.group{display:flex; align-items:center; gap:3px}
+.group > span{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-right:3px}
+.lv{min-width:34px; height:34px; border:1px solid var(--rule); background:var(--sheet); border-radius:3px; cursor:pointer; font-family:var(--f-mono); font-size:14px; font-weight:600; position:relative; padding:0}
+.lv.cur{background:var(--ink); color:var(--sheet); border-color:var(--ink)}
+.lv.done{border-color:var(--hit); box-shadow:inset 0 -3px 0 var(--hit)}
+.lv.cur.done{box-shadow:inset 0 -3px 0 #0f7a4d}
+.lv.helped{box-shadow:inset 0 -3px 0 var(--steel-lt)}
+.total{font-family:var(--f-mono); font-size:14px; font-weight:600; white-space:nowrap}
+
+.range{min-width:0; min-height:0; display:flex; align-items:flex-start; justify-content:center}
+#scene{display:block; border:1px solid var(--rule); border-radius:4px; background:var(--field); max-width:100%}
+.test{min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-bottom:6px}
+.sheet{background:var(--sheet); border:1px solid var(--rule); padding:12px 14px; display:flex; flex-direction:column; gap:8px}
+.tag{font-family:var(--f-mono); font-size:13px; font-weight:600; color:var(--safety)}
+h2{margin:0; font-size:20px; line-height:1.2; text-wrap:balance}
+.story{margin:0}
+.story b{font-family:var(--f-mono); font-weight:600}
+.entry{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.entry label{font-family:var(--f-mono); font-weight:600}
+#ans{width:7.5em; font-family:var(--f-mono); font-weight:600; font-size:18px; padding:7px 8px; background:var(--field); border:2px solid var(--safety); border-radius:2px; color:var(--ink)}
+.btn{border:1px solid var(--ink); background:transparent; padding:9px 13px; font-weight:700; cursor:pointer; border-radius:2px}
+.btn.go{background:var(--safety); border-color:var(--safety); color:var(--on-safety)}
+.btn:disabled{opacity:.45; cursor:default}
+.row{display:flex; flex-wrap:wrap; gap:8px}
+.err{margin:0; color:var(--miss); font-weight:700; font-size:15px}
+.note{margin:0; font-size:14.5px; color:var(--muted)}
+.eqs{margin:0; padding:0; list-style:none; font-family:var(--f-mono); font-size:14.5px; display:flex; flex-direction:column; gap:2px}
+.label{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted)}
+.result{font-weight:700; font-size:17px; margin:0}
+.result.hit{color:var(--hit)} .result.miss{color:var(--miss)}
+.facts{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:3px; font-size:15px}
+.steps{margin:0; padding-left:20px; display:flex; flex-direction:column; gap:4px; font-size:15px}
+.steps .m{font-family:var(--f-mono); font-size:14.5px}
+
+/* One level with fixed numbers (opened from a link): no level menu or star count. */
+.app.locked .nav, .app.locked .total{display:none}
+.app.locked h1{font-size:22px}
+/* Test mode: only the picture of the setup, no answer entry or feedback. */
+html.bare, html.bare body{height:auto}
+.app.bare{height:auto; grid-template-columns:minmax(0,1fr); grid-template-rows:auto}
+.app.bare header, .app.bare .test{display:none}
+.app.bare .range{display:block}
+
+@media (max-width:900px){
+  html,body{height:auto}
+  .app{grid-template-columns:minmax(0,1fr); grid-template-rows:none; height:auto}
+  .test{overflow:visible}
+}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <header>
+    <h1>Physics Proving Ground</h1>
+    <nav class="nav" id="nav" aria-label="Levels"></nav>
+    <div class="total" id="total"></div>
+  </header>
+  <section class="range" id="range"><canvas id="scene" role="img" aria-label="Side view of the test range"></canvas></section>
+  <aside class="test" id="test">
+    <section class="sheet">
+      <div class="tag" id="tag"></div>
+      <h2 id="lvName"></h2>
+      <p class="story" id="story"></p>
+      <form class="entry" id="form" autocomplete="off">
+        <label for="ans" id="ansLabel"></label>
+        <input id="ans" type="text" inputmode="decimal" autocomplete="off" aria-describedby="errMsg">
+        <button class="btn go" id="btnGo" type="submit">Launch</button>
+      </form>
+      <p class="err" id="errMsg" hidden></p>
+      <p class="note">Calculate your answer, then launch. Use g = 9.8 m/s² and keep three significant figures. Ghost images mark equal time steps, so wider gaps mean faster motion.</p>
+    </section>
+    <section class="sheet">
+      <div class="label">Useful equations</div>
+      <ul class="eqs" id="eqs"></ul>
+    </section>
+    <section class="sheet" id="debrief" hidden>
+      <p class="result" id="resultLine"></p>
+      <div id="factsBox"><div class="label">What your launch did</div><ul class="facts" id="facts"></ul></div>
+      <div id="ideaBox"><div class="label">The physics</div><p class="story" id="idea"></p></div>
+      <div id="stepsBox" hidden><div class="label">Worked solution</div><ol class="steps" id="steps"></ol></div>
+      <div class="row">
+        <button class="btn" id="btnSolve" type="button">Show worked solution</button>
+        <button class="btn" id="btnFresh" type="button">New numbers</button>
+        <button class="btn go" id="btnNext" type="button" hidden>Next level</button>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const g = 9.8, RAD = Math.PI / 180;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const rnd = (a, b, s) => { const n = Math.round((b - a) / s); return +(a + s * Math.floor(Math.random() * (n + 1))).toFixed(4); };
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const f = x => { if (!isFinite(x)) return '∞'; const a = Math.abs(x); return a >= 100 ? x.toFixed(0) : a >= 10 ? x.toFixed(1) : a >= 1 ? x.toFixed(2) : x.toFixed(3); };
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const fallTime = H => Math.sqrt(2 * H / g);
+const shortLong = (got, want, unit) => `${f(Math.abs(got - want))} ${unit} ${got < want ? 'short' : 'too far'}`;
+const within = (got, want, frac) => Math.abs(got - want) <= frac * want;
+// Point s along a track that runs flat, then bends up a hill at x = xr: [x, y, tilt]. The tilt eases in as the wheels cross the bend.
+const hillAt = (xr, s, deg) => { const a = deg * RAD; return s <= 0 ? [xr + s, 0, 0] : [xr + s * Math.cos(a), s * Math.sin(a), a * clamp(s / .2, 0, 1)]; };
+
+/* ---------- the levels. sim() must also work with v = 0, which draws the setup before a launch. ---------- */
+const CHAPTERS = ['Motion', 'Forces', 'Energy', 'Rotation'];
+const LEVELS = [
+{ch:0, name:'Off the bench', sym:'v', unit:'m/s', word:'launch speed',
+  story:p => `A pusher starts a ball from rest and rolls it along a bench <b>${p.h} m</b> high, letting go at the edge. The landing pad is <b>${p.d} m</b> from the edge. What speed must the ball leave the bench with?`,
+  eqs:['y = ½gt²', 'x = v·t'], idea:'Horizontal and vertical motion are independent. The height alone sets the fall time, and the speed then sets how far the ball goes in that time.',
+  gen:() => ({h:rnd(.8, 1.6, .1), d:rnd(1.5, 3.5, .1)}), ans:p => p.d * Math.sqrt(g / (2 * p.h)), view:p => [-2.8, p.d * 1.45, p.h * 1.5],
+  sim(p, v){ const t0 = fallTime(p.h), land = v * t0, hit = within(land, p.d, .03), run = 2, push = v * v / (2 * run), T0 = v > 0 ? 2 * run / v : 0;   // pushed from rest over the run, reaching v at the edge
+    return {T:Math.min(T0 + t0, 8), hit, miss:`The ball landed ${shortLong(land, p.d, 'm')}.`, facts:[`Fall time: ${f(t0)} s, which your speed cannot change`, `Distance: ${f(v)} m/s × ${f(t0)} s = ${f(land)} m`],
+      draw(t, D){ D.bench(-2.8, 0, p.h); D.pad(p.d, .03 * p.d); D.dim(0, p.d, -.14 * p.h, `${p.d} m`); D.vdim(-.25, 0, p.h, `${p.h} m`);
+        const onBench = t < T0 || !v, fall = Math.max(0, t - T0), x = onBench ? -run + .5 * push * t * t : v * fall, y = p.h - .5 * g * fall * fall, sp = onBench ? push * t : v;
+        D.pusher(-2.6, Math.min(x, 0), p.h); D.ball(x, y, 0, '', onBench ? x + run : run + x); D.vel(x, y, sp, -g * fall);
+        return onBench ? ['rolling on the bench', `x ${f(x)} m`, `v ${f(sp)} m/s`] : [`fall time ${f(fall)} s`, `x ${f(x)} m`, `vy ${f(g * fall)} m/s`]; }}; },
+  steps:(p, a) => [`Fall time from the height: <span class="m">t = √(2h/g) = √(2·${p.h}/9.8) = ${f(fallTime(p.h))} s</span>`, `Speed to cover the distance in that time: <span class="m">v = d/t = ${p.d}/${f(fallTime(p.h))} = ${f(a)} m/s</span>`]},
+
+{ch:0, name:'Stop on the line', sym:'a', unit:'m/s²', word:'braking rate',
+  story:p => `A test cart reaches the brake zone at <b>${p.v} m/s</b>. It has to stop <b>${p.d} m</b> later, right on the line. How hard must it brake?`,
+  eqs:['v² = v₀² + 2a·Δx'], idea:'With no time given, use the equation without t. The final speed is zero, and stopping distance grows with the square of the speed.',
+  gen:() => ({v:rnd(8, 20, 1), d:rnd(12, 40, 1)}), ans:p => p.v * p.v / (2 * p.d), view:p => [-3, p.d * 1.4, p.d * .35],
+  sim(p, a){ const s = a > 0 ? p.v * p.v / (2 * a) : Infinity, Tstop = a > 0 ? p.v / a : Infinity, T = Math.min(Tstop, 6), hit = within(s, p.d, .03);
+    return {T, hit, miss:isFinite(s) ? `The cart stopped ${shortLong(s, p.d, 'm')}.` : 'With no braking, the cart never stops.', facts:isFinite(s) ? [`Stopping distance: ${p.v}² / (2 × ${f(a)}) = ${f(s)} m`, `Stopping time: ${f(Tstop)} s`] : ['A braking rate of zero leaves the speed constant.'],
+      draw(t, D){ D.ground(); D.pad(p.d, .03 * p.d); D.dim(0, p.d, -p.d * .05, `${p.d} m`);
+        const x = p.v * t - .5 * a * t * t, sp = p.v - a * t; D.cart(x, .012 * p.d); D.vel(x, p.d * .05, sp, 0); return [`t ${f(t)} s`, `x ${f(x)} m`, `v ${f(sp)} m/s`]; }}; },
+  steps:(p, a) => [`Final speed is zero: <span class="m">0 = v₀² − 2a·d</span>`, `Solve for a: <span class="m">a = v₀²/(2d) = ${p.v}²/(2·${p.d}) = ${f(a)} m/s²</span>`]},
+
+{ch:0, name:'Fixed angle', sym:'v', unit:'m/s', word:'launch speed',
+  story:p => `A launcher is locked at <b>${p.th}°</b> above level ground. The target is <b>${p.R} m</b> away at launcher height. What launch speed reaches it?`,
+  eqs:['R = v²·sin(2θ) / g', 'vₓ = v cos θ', 'v_y = v sin θ'], idea:'Over level ground the range depends on the square of the speed, so doubling the speed gives four times the range.',
+  gen:() => ({th:pick([30, 40, 50, 60]), R:rnd(8, 20, 1)}), ans:p => Math.sqrt(p.R * g / Math.sin(2 * p.th * RAD)), view:p => [-1.5, p.R * 1.35, p.R * .62],
+  sim(p, v){ const c = Math.cos(p.th * RAD), s = Math.sin(p.th * RAD), T = 2 * v * s / g, R = v * c * T, hit = within(R, p.R, .03);
+    return {T, hit, miss:`The shot landed ${shortLong(R, p.R, 'm')}.`, facts:[`Flight time: ${f(T)} s`, `Horizontal speed: ${f(v * c)} m/s, constant the whole way`, `Range: ${f(R)} m`],
+      draw(t, D){ D.ground(); D.pad(p.R, .03 * p.R); D.dim(0, p.R, -p.R * .045, `${p.R} m`); D.launcher(0, 0, p.th, `${p.th}°`);
+        const vy = v * s - g * t, x = v * c * t, y = v * s * t - .5 * g * t * t; D.trace(tt => [v * c * tt, v * s * tt - .5 * g * tt * tt], t); D.ball(x, y); D.vel(x, y, v * c, vy); return [`t ${f(t)} s`, `x ${f(x)} m`, `y ${f(y)} m`]; }}; },
+  steps:(p, a) => [`Range equation: <span class="m">R = v²·sin(2θ)/g</span>`, `Solve for v: <span class="m">v = √(Rg / sin 2θ) = √(${p.R}·9.8 / sin ${2 * p.th}°) = ${f(a)} m/s</span>`]},
+
+{ch:0, name:'Lead the cart', sym:'t', unit:'s', word:'release delay',
+  story:p => `A cart rolls right at <b>${p.u} m/s</b>, starting <b>${p.x0} m</b> left of a tower's base. From the top of the tower, <b>${p.h} m</b> up, a ball is launched to the right at <b>${p.v} m/s</b>. How long after the cart starts should you release the ball so it lands in the cart?`,
+  eqs:['t_fall = √(2h/g)', 'x_land = v·t_fall', 'x_cart = x₀ + u·t'], idea:'Both have to reach the same place at the same time. Find where the ball lands and how long the fall takes, then work out when the cart gets there.',
+  gen(){ for (;;){ const p = {u:rnd(1.5, 3, .5), x0:rnd(5, 10, 1), v:rnd(1, 3, .5), h:rnd(3, 6, 1)}; if (this.ans(p) > .8) return p; } },
+  ans:p => (p.x0 + p.v * fallTime(p.h)) / p.u - fallTime(p.h), view:p => [-p.x0 - 1, p.v * fallTime(p.h) + 3, p.h * 1.3],
+  sim(p, d){ const tf = fallTime(p.h), land = p.v * tf, T = d + tf, cart = t => -p.x0 + p.u * t, gap = cart(T) - land, hit = Math.abs(gap) <= .3;
+    return {T:Math.min(T, 8), hit, miss:`The ball landed with the cart ${f(Math.abs(gap))} m ${gap < 0 ? 'short of' : 'past'} the spot.`, facts:[`The ball lands ${f(land)} m out after falling for ${f(tf)} s`, `It lands at t = ${f(d)} + ${f(tf)} = ${f(T)} s`, `The cart is then at ${f(cart(T))} m`],
+      draw(t, D){ D.ground(); D.cart(cart(t), .4); D.tower(0, p.h); D.dim(-p.x0, 0, -p.h * .07, `${p.x0} m`);
+        const ft = t - d; if (ft < 0){ D.ball(0, p.h); } else { const q = Math.min(ft, tf), x = p.v * q, y = p.h - .5 * g * q * q; D.ball(x, y); D.vel(x, y, p.v, -g * q); }
+        return [`t ${f(t)} s`, `cart ${f(cart(t))} m`, ft < 0 ? 'ball held' : 'ball away']; }}; },
+  steps:(p, a) => { const tf = fallTime(p.h), L = p.v * tf; return [`Fall time: <span class="m">t = √(2·${p.h}/9.8) = ${f(tf)} s</span>`, `Landing spot: <span class="m">x = ${p.v}·${f(tf)} = ${f(L)} m</span>`, `Cart's time to reach it: <span class="m">(${p.x0} + ${f(L)})/${p.u} = ${f(a + tf)} s</span>`, `Release delay: <span class="m">${f(a + tf)} − ${f(tf)} = ${f(a)} s</span>`]; }},
+
+{ch:1, name:'Skid to the mark', sym:'v', unit:'m/s', word:'launch speed',
+  story:p => `A sled slides across a floor with friction coefficient <b>μ = ${p.mu}</b>. It has to stop <b>${p.d} m</b> from the start. What speed should it begin with?`,
+  eqs:['f = μN = μmg', 'a = F / m', 'v² = v₀² + 2a·Δx'], idea:'Friction is the net force, and the mass cancels: a = μg. A heavier sled feels more friction but has more inertia, so it stops in the same distance.',
+  gen:() => ({mu:rnd(.15, .5, .05), d:rnd(4, 15, 1)}), ans:p => Math.sqrt(2 * p.mu * g * p.d), view:p => [-1.5, p.d * 1.4, p.d * .35],
+  sim(p, v){ const a = p.mu * g, s = v * v / (2 * a), T = v / a, hit = within(s, p.d, .03);
+    return {T, hit, miss:`The sled stopped ${shortLong(s, p.d, 'm')}.`, facts:[`Friction slows it at μg = ${f(a)} m/s²`, `Stopping distance: ${f(s)} m in ${f(T)} s`],
+      draw(t, D){ D.ground(); D.pad(p.d, .03 * p.d); D.dim(0, p.d, -p.d * .05, `${p.d} m`);
+        const x = v * t - .5 * a * t * t, sp = v - a * t; D.block(x, 0, p.d * .07, p.d * .04); D.vel(x, p.d * .07, sp, 0); D.force(x, p.d * .02, 0, 1, 'N', 46); D.force(x, p.d * .02, 0, -1, 'mg', 46); if (sp > .01) D.force(x - p.d * .035, p.d * .01, -1, 0, 'f', 46 * p.mu); return [`t ${f(t)} s`, `x ${f(x)} m`, `v ${f(sp)} m/s`]; }}; },
+  steps:(p, a) => [`Net force is friction: <span class="m">μmg = ma, so a = μg = ${f(p.mu * g)} m/s²</span>`, `Stops at the mark: <span class="m">v² = 2ad</span>`, `<span class="m">v = √(2·${f(p.mu * g)}·${p.d}) = ${f(a)} m/s</span>`]},
+
+{ch:1, name:'Steady up the ramp', sym:'F', unit:'N', word:'rope force',
+  story:p => `A <b>${p.m} kg</b> crate enters a <b>${p.th}°</b> ramp at <b>${p.v0} m/s</b>. The ramp has friction coefficient <b>μ = ${p.mu}</b>. What rope force, parallel to the ramp, keeps the crate moving at constant speed all the way up?`,
+  eqs:['Weight along ramp = mg sin θ', 'N = mg cos θ', 'f = μN', 'ΣF = ma'], idea:'Constant speed means zero acceleration, so the forces along the ramp must balance. The rope has to match the pull of gravity along the ramp plus friction.',
+  gen:() => ({m:rnd(10, 40, 5), th:pick([15, 20, 25, 30, 35]), mu:rnd(.1, .4, .05), v0:rnd(1, 2, .5), L:5}), ans:p => p.m * g * (Math.sin(p.th * RAD) + p.mu * Math.cos(p.th * RAD)), view:p => [-.8, 5.7, 3.9],
+  sim(p, F){ const s = Math.sin(p.th * RAD), c = Math.cos(p.th * RAD), res = p.m * g * (s + p.mu * c), a = (F - res) / p.m, hit = within(F, res, .02);
+    let T = 6, disc = p.v0 * p.v0 + 2 * a * p.L; if (disc >= 0) T = a ? (Math.sqrt(disc) - p.v0) / a : p.L / p.v0; else T = -p.v0 / a;
+    const end = p.v0 + a * T;
+    return {T, hit, miss:a > 0 ? `The crate sped up to ${f(end)} m/s. Your force was ${f(F - res)} N too big.` : `The crate ${disc < 0 ? 'stalled partway up' : `slowed to ${f(end)} m/s`}. Your force was ${f(res - F)} N too small.`, facts:[`Weight along the ramp: ${f(p.m * g * s)} N`, `Friction: ${f(p.mu * p.m * g * c)} N`, `Net force: ${f(F - res)} N, so a = ${f(a)} m/s²`],
+      draw(t, D){ const L = p.L, X = q => q * c, Y = q => q * s; D.ground(); D.slope(0, 0, X(L + .25), Y(L + .25)); D.angle(0, 0, p.th); D.flag(X(L), Y(L));
+        const q = p.v0 * t + .5 * a * t * t, sp = p.v0 + a * t, h = .4, cx = X(q) - h / 2 * s, cy = Y(q) + h / 2 * c; D.crate(X(q), Y(q), p.th * RAD, .55, h);
+        const px0 = D.x(cx), py0 = D.y(cy); D.forcePx(px0, py0, c, s, 'T', 46 * F / (p.m * g)); D.forcePx(px0, py0, -c, -s, 'f', 46 * p.mu * c); D.forcePx(px0, py0, -s, c, 'N', 46 * c); D.forcePx(px0, py0, 0, -1, 'mg', 46); return [`t ${f(t)} s`, `v ${f(sp)} m/s`, `net ${f(F - res)} N`]; }}; },
+  steps:(p, a) => { const s = Math.sin(p.th * RAD), c = Math.cos(p.th * RAD); return [`Zero acceleration: <span class="m">F = mg sin θ + μ mg cos θ</span>`, `Along the ramp: <span class="m">${p.m}·9.8·sin ${p.th}° = ${f(p.m * g * s)} N</span>`, `Friction: <span class="m">${p.mu}·${p.m}·9.8·cos ${p.th}° = ${f(p.mu * p.m * g * c)} N</span>`, `Total: <span class="m">F = ${f(a)} N</span>`]; }},
+
+{ch:1, name:'Hanging counterweight', sym:'M', unit:'kg', word:'hanging mass',
+  story:p => `A <b>${p.m} kg</b> cart on a frictionless track is tied over a pulley to a hanging mass. Released from rest, the cart must travel <b>${p.d} m</b> in exactly <b>${p.t} s</b>. What hanging mass does that take?`,
+  eqs:['d = ½at²', 'Mg − T = Ma', 'T = ma'], idea:'The hanging weight accelerates both masses, so a = Mg/(M + m). A larger hanging mass helps, but the acceleration can never reach g.',
+  gen:() => ({m:rnd(1, 4, .5), d:rnd(1.2, 2, .2), t:rnd(1.2, 2, .2)}), ans:p => { const a = 2 * p.d / (p.t * p.t); return p.m * a / (g - a); }, view:p => [-.6, p.d + 1.3, p.d + 1.3],
+  sim(p, M){ const a = M * g / (M + p.m), Tc = a > 0 ? Math.sqrt(2 * p.d / a) : Infinity, hit = within(Tc, p.t, .03), T = Math.min(Tc, 5), gap = Tc - p.t;
+    return {T, hit, miss:isFinite(Tc) ? `The cart took ${f(Tc)} s, ${f(Math.abs(gap))} s ${gap > 0 ? 'too slow' : 'too fast'}.` : 'With no hanging mass, nothing pulls the cart.', facts:[`Acceleration: Mg/(M + m) = ${f(a)} m/s²`, `Tension in the string: ${f(p.m * a)} N`, `Time over ${p.d} m: ${f(Tc)} s`],
+      draw(t, D){ const y = p.d + .65, ex = p.d + .45, q = Math.min(.5 * a * t * t, p.d); D.bench(-.6, ex, y); D.pad(p.d, .05, y); D.dim(0, p.d, y - .12, `${p.d} m`);
+        // the rope leaves the crate at mid-height and runs level to the top of the pulley, then straight down
+        const sc = D.y(0) - D.y(1), bh = Math.max(18, sc * .2) / sc, rope = y + bh / 2, r = .09, cx = q, px2 = ex + Math.max(.1, 11 / sc), py = rope - r, hx = px2 + r, hy = y - .25 - q;
+        D.string(cx, rope, px2, rope); D.string(hx, py, hx, hy); D.arm(ex, y, px2, py); D.pulley(px2, py, r);
+        D.block(cx, y, .34, .2); D.block(hx, hy - bh, .2, .2, M ? `${f(M)} kg` : 'M');
+        D.force(cx, rope, 1, 0, 'T'); return [`t ${f(t)} s`, `x ${f(q)} m`, `v ${f(a * t)} m/s`]; }}; },
+  steps:(p, A) => { const a = 2 * p.d / (p.t * p.t); return [`Needed acceleration: <span class="m">a = 2d/t² = 2·${p.d}/${p.t}² = ${f(a)} m/s²</span>`, `Forces on both masses: <span class="m">Mg = (M + m)a</span>`, `Solve for M: <span class="m">M = ma/(g − a) = ${p.m}·${f(a)}/(9.8 − ${f(a)}) = ${f(A)} kg</span>`]; }},
+
+{ch:1, name:'Up to the latch', sym:'v', unit:'m/s', word:'launch speed',
+  story:p => `A puck is shot up a <b>${p.th}°</b> ramp with friction coefficient <b>μ = ${p.mu}</b>. A latch <b>${p.L} m</b> along the ramp catches it only if it stops right there. What starting speed does it need?`,
+  eqs:['a = g(sin θ + μ cos θ)', 'v² = 2a·L'], idea:'Going up, gravity and friction both point down the ramp, so they add. The puck slows faster than it would on a frictionless ramp.',
+  gen:() => ({th:pick([15, 20, 25, 30]), mu:rnd(.1, .3, .05), L:rnd(2, 5, 1)}), ans:p => Math.sqrt(2 * g * (Math.sin(p.th * RAD) + p.mu * Math.cos(p.th * RAD)) * p.L), view:p => [-.8, p.L * 1.3, p.L * .75],
+  sim(p, v){ const s = Math.sin(p.th * RAD), c = Math.cos(p.th * RAD), a = g * (s + p.mu * c), reach = v * v / (2 * a), T = v / a, hit = within(reach, p.L, .03), R = Math.max(p.L * 1.15, Math.min(reach, p.L * 1.6));
+    return {T, hit, miss:`The puck stopped ${shortLong(reach, p.L, 'm')} along the ramp.`, facts:[`Slowing at g(sin θ + μ cos θ) = ${f(a)} m/s²`, `Distance up the ramp: ${f(reach)} m`],
+      draw(t, D){ const X = q => q * c, Y = q => q * s; D.ground(); D.slope(0, 0, X(R), Y(R)); D.angle(0, 0, p.th); D.flag(X(p.L), Y(p.L));
+        const q = Math.min(v * t - .5 * a * t * t, R), sp = v - a * t, h = .12, bx = X(q) - h / 2 * s, by = Y(q) + h / 2 * c; D.crate(X(q), Y(q), p.th * RAD, .3, h);
+        const cx = D.x(bx), cy = D.y(by); D.forcePx(cx, cy, 0, -1, 'mg', 46); D.forcePx(cx, cy, -s, c, 'N', 46 * c); if (sp > .01) D.forcePx(cx, cy, -c, -s, 'f', 46 * p.mu * c); return [`t ${f(t)} s`, `along ${f(q)} m`, `v ${f(sp)} m/s`]; }}; },
+  steps:(p, A) => { const a = g * (Math.sin(p.th * RAD) + p.mu * Math.cos(p.th * RAD)); return [`Both forces point down the ramp: <span class="m">a = g(sin ${p.th}° + ${p.mu}·cos ${p.th}°) = ${f(a)} m/s²</span>`, `Speed to stop at L: <span class="m">v = √(2aL) = √(2·${f(a)}·${p.L}) = ${f(A)} m/s</span>`]; }},
+
+{ch:2, name:'Spring to the summit', sym:'x', unit:'m', word:'spring compression',
+  story:p => `A <b>${p.m} kg</b> cart sits against a spring with <b>k = ${p.k} N/m</b>. The track is frictionless and climbs to a stop at <b>${p.h} m</b> height. How far should you compress the spring so the cart just reaches that height?`,
+  eqs:['PEₛ = ½kx²', 'PE = mgh', 'KE = ½mv²'], idea:'Mechanical energy is conserved. All the spring energy becomes gravitational energy at the top, and the path in between does not matter.',
+  gen:() => ({m:rnd(.5, 2, .5), k:rnd(200, 800, 100), h:rnd(.8, 2.2, .2)}), ans:p => Math.sqrt(2 * p.m * g * p.h / p.k), view:p => [-1, 1 + p.h * 2.3, p.h * 1.5],
+  sim(p, x){ const v = x * Math.sqrt(p.k / p.m), H = v * v / (2 * g), hit = within(H, p.h, .03), sn = .5, om = Math.sqrt(p.k / p.m), T0 = x > 0 ? Math.PI / 2 / om : 0, T1 = v > 0 ? .85 / v : 0, a = g * sn, T2 = v / a, T = T0 + T1 + T2, R = p.h / sn;
+    return {T:Math.min(T, 7), hit, miss:`The cart stopped at ${f(H)} m height, ${shortLong(H, p.h, 'm')}.`, facts:[`Spring energy: ½·${p.k}·${f(x)}² = ${f(.5 * p.k * x * x)} J`, `Speed leaving the spring: ${f(v)} m/s`, `Energy needed at the top: mgh = ${f(p.m * g * p.h)} J`],
+      draw(t, D){ const c = Math.cos(30 * RAD), xr = 1, top = Math.max(R * 1.15, 1); D.ground(); D.slope(xr, 0, xr + top * c, top * sn); D.flag(xr + R * c, R * sn); D.wall(-1);
+        let e = 0, sp, q;   // e is the free end of the spring; q is distance past the foot of the hill
+        if (t < T0){ e = -x * Math.cos(om * t); sp = x * om * Math.sin(om * t); q = e + .15 - xr; } else if (t < T0 + T1 || !x){ sp = v; q = .15 + v * (t - T0) - xr; } else { const u = t - T0 - T1; sp = v - a * u; q = v * u - .5 * a * u * u; }
+        D.spring(-1, e, .08); const P = hillAt(xr, q, 30); D.cart(P[0], .2, '', P[1], P[2], q); return [`t ${f(t)} s`, `height ${f(P[1])} m`, `v ${f(sp)} m/s`]; }}; },
+  steps:(p, a) => [`Energy conservation: <span class="m">½kx² = mgh</span>`, `Solve for x: <span class="m">x = √(2mgh/k) = √(2·${p.m}·9.8·${p.h}/${p.k}) = ${f(a)} m</span>`]},
+
+{ch:2, name:'Spring meets carpet', sym:'x', unit:'m', word:'spring compression',
+  story:p => `A <b>${p.m} kg</b> block is pushed against a spring with <b>k = ${p.k} N/m</b> on a frictionless surface. It then slides onto carpet with <b>μ = ${p.mu}</b> and has to stop <b>${p.d} m</b> into the carpet. How far should you compress the spring?`,
+  eqs:['PEₛ = ½kx²', 'Work by friction = μmg·d'], idea:'Friction takes energy out of the system. The block stops once the work done by friction equals the energy the spring stored.',
+  gen:() => ({m:rnd(.5, 2, .5), k:rnd(200, 800, 100), mu:rnd(.2, .5, .1), d:rnd(1, 3, .5)}), ans:p => Math.sqrt(2 * p.mu * p.m * g * p.d / p.k), view:p => [-1, p.d * 1.5 + 1, 1.5],
+  sim(p, x){ const v = x * Math.sqrt(p.k / p.m), a = p.mu * g, s = v * v / (2 * a), T1 = v > 0 ? .65 / v : 0, T2 = v / a, hit = within(s, p.d, .03), cs = .8, om = Math.sqrt(p.k / p.m), T0 = x > 0 ? Math.PI / 2 / om : 0;
+    return {T:T0 + T1 + T2, hit, miss:`The block stopped ${shortLong(s, p.d, 'm')} on the carpet.`, facts:[`Spring energy: ${f(.5 * p.k * x * x)} J`, `Friction force: ${f(p.mu * p.m * g)} N`, `Stopping distance: ${f(.5 * p.k * x * x)} J ÷ ${f(p.mu * p.m * g)} N = ${f(s)} m`],
+      draw(t, D){ D.ground(); D.wall(-1); D.carpet(cs, cs + p.d * 1.5); D.pad(cs + p.d, .03 * p.d); D.dim(cs, cs + p.d, -.1, `${p.d} m`);
+        let e = 0, q, sp; if (t < T0){ e = -x * Math.cos(om * t); sp = x * om * Math.sin(om * t); q = e + .15; } else if (t < T0 + T1 || !x){ sp = v; q = .15 + v * (t - T0); } else { const u = t - T0 - T1; sp = v - a * u; q = cs + v * u - .5 * a * u * u; } D.spring(-1, e, .1); D.block(q, 0, .3, .2); D.vel(q, .25, sp, 0); return [`t ${f(t)} s`, `x ${f(q)} m`, `v ${f(sp)} m/s`]; }}; },
+  steps:(p, a) => [`Spring energy goes into friction work: <span class="m">½kx² = μmg·d</span>`, `Friction work: <span class="m">${p.mu}·${p.m}·9.8·${p.d} = ${f(p.mu * p.m * g * p.d)} J</span>`, `Solve for x: <span class="m">x = √(2·${f(p.mu * p.m * g * p.d)}/${p.k}) = ${f(a)} m</span>`]},
+
+{ch:2, name:'Stick and climb', sym:'v', unit:'m/s', word:'speed of cart A',
+  story:p => `Cart A (<b>${p.m1} kg</b>) hits parked cart B (<b>${p.m2} kg</b>) and they lock together. The pair then coasts up a frictionless hill. They must reach exactly <b>${p.h} m</b> height. How fast must cart A go before the crash?`,
+  eqs:['m₁v = (m₁ + m₂)v′', '½(m₁ + m₂)v′² = (m₁ + m₂)gh'], idea:'Split this into two stages. Momentum is conserved in the crash, but kinetic energy is not. After the crash, energy is conserved on the hill.',
+  gen:() => ({m1:rnd(1, 4, .5), m2:rnd(1, 4, .5), h:rnd(.5, 1.5, .1)}), ans:p => (p.m1 + p.m2) / p.m1 * Math.sqrt(2 * g * p.h), view:p => [-1.5, 1.2 + p.h * 2.5, p.h * 1.5],
+  sim(p, v){ const vc = p.m1 * v / (p.m1 + p.m2), H = vc * vc / (2 * g), hit = within(H, p.h, .03), sn = .5, c = Math.cos(30 * RAD), a = g * sn, T1 = v > 0 ? .9 / v : 0, T2 = v > 0 ? 1 / vc : 0, T3 = vc / a, T = T1 + T2 + T3, R = p.h / sn;
+    return {T:Math.min(T, 8), hit, miss:`The carts reached ${f(H)} m height, ${shortLong(H, p.h, 'm')}.`, facts:[`Speed after the crash: ${p.m1}·${f(v)}/${f(p.m1 + p.m2)} = ${f(vc)} m/s`, `Kinetic energy lost in the crash: ${f(.5 * p.m1 * v * v - .5 * (p.m1 + p.m2) * vc * vc)} J`, `Height from the remaining energy: ${f(H)} m`],
+      draw(t, D){ const xr = 1.2; D.ground(); D.slope(xr, 0, xr + R * 1.15 * c, R * 1.15 * sn); D.flag(xr + R * c, R * sn);
+        let sB = .2 - xr, sA = -1 - xr; if (t < T1) sA += v * t; else { const u = t - T1; sB = u < T2 ? .2 - xr + vc * u : vc * (u - T2) - .5 * a * (u - T2) ** 2; sA = sB - .3; }
+        const A = hillAt(xr, sA, 30), B = hillAt(xr, sB, 30), by = B[1]; D.cart(A[0], .2, 'A', A[1], A[2], sA); D.cart(B[0], .2, 'B', B[1], B[2], sB); if (t < T1) D.vel(A[0], .2, v, 0);
+        return [`t ${f(t)} s`, `height ${f(by)} m`, t < T1 ? `v ${f(v)} m/s` : `v′ ${f(vc)} m/s`]; }}; },
+  steps:(p, a) => { const vc = Math.sqrt(2 * g * p.h); return [`Speed needed after the crash: <span class="m">v′ = √(2gh) = √(2·9.8·${p.h}) = ${f(vc)} m/s</span>`, `Momentum in the crash: <span class="m">m₁v = (m₁ + m₂)v′</span>`, `<span class="m">v = (${p.m1} + ${p.m2})·${f(vc)}/${p.m1} = ${f(a)} m/s</span>`]; }},
+
+{ch:2, name:'Knock it off the edge', sym:'v', unit:'m/s', word:'speed of ball A',
+  story:p => `Ball A (<b>${p.m1} kg</b>) hits ball B (<b>${p.m2} kg</b>) in a perfectly elastic head-on collision. Ball B sits at the edge of a table <b>${p.H} m</b> high and must land <b>${p.d} m</b> from the edge. How fast must ball A be going?`,
+  eqs:['v_B = 2m₁v / (m₁ + m₂)', 't = √(2H/g)', 'd = v_B·t'], idea:'Work backward. The landing tells you the speed B needs, and the elastic collision equation connects that to the speed of A.',
+  gen:() => ({m1:rnd(.5, 2, .5), m2:rnd(.5, 2, .5), H:rnd(.8, 1.4, .2), d:rnd(1, 2.5, .5)}), ans:p => p.d * Math.sqrt(g / (2 * p.H)) * (p.m1 + p.m2) / (2 * p.m1), view:p => [-1.4, p.d * 1.5, p.H * 1.6],
+  sim(p, v){ const vb = 2 * p.m1 * v / (p.m1 + p.m2), va = (p.m1 - p.m2) * v / (p.m1 + p.m2), tf = fallTime(p.H), land = vb * tf, hit = within(land, p.d, .03), T1 = v > 0 ? .9 / v : 0;
+    return {T:T1 + tf, hit, miss:`Ball B landed ${shortLong(land, p.d, 'm')}.`, facts:[`Ball B left at ${f(vb)} m/s`, `Ball A kept moving at ${f(va)} m/s`, `Fall time: ${f(tf)} s, so B lands ${f(land)} m out`],
+      draw(t, D){ const y = p.H; D.bench(-1.4, 0, y); D.pad(p.d, .03 * p.d); D.dim(0, p.d, -.12, `${p.d} m`); D.vdim(-.2, 0, y, `${p.H} m`);
+        let ax, bx = 0, by = y; if (t < T1){ ax = -1 + v * t - .08; D.ball(0, y + .08, .08, 'B'); D.ball(ax, y + .1, .1, 'A'); D.vel(ax, y + .2, v, 0); }
+        else { const q = t - T1, tE = va > 0 ? .18 / va : Infinity; ax = -.18 + va * q; bx = vb * q; by = y - .5 * g * q * q; const ay = q > tE ? y - .5 * g * (q - tE) ** 2 : y; D.ball(ax, Math.max(ay, 0) + .1, .1, 'A'); D.ball(bx, by + .08, .08, 'B'); D.vel(bx, by + .1, vb, -g * q); }
+        return [`t ${f(t)} s`, `B x ${f(bx)} m`, `B y ${f(by)} m`]; }}; },
+  steps:(p, a) => { const tf = fallTime(p.H), vb = p.d / tf; return [`Fall time: <span class="m">t = √(2·${p.H}/9.8) = ${f(tf)} s</span>`, `Speed B needs: <span class="m">v_B = ${p.d}/${f(tf)} = ${f(vb)} m/s</span>`, `Elastic collision: <span class="m">v = v_B(m₁ + m₂)/(2m₁) = ${f(a)} m/s</span>`]; }},
+
+{ch:3, name:'Level the seesaw', sym:'x', unit:'m', word:'distance from the pivot',
+  story:p => `A <b>${p.m1} kg</b> load sits <b>${p.d1} m</b> left of a seesaw's pivot. Where, measured from the pivot, must a <b>${p.m2} kg</b> load go on the right side so the beam balances?`,
+  eqs:['τ = F·d', 'Στ = 0 in balance'], idea:'Balance is about torque, not weight alone. A small mass far from the pivot can balance a large mass close to it.',
+  gen(){ for (;;){ const p = {m1:rnd(10, 40, 5), d1:rnd(.6, 1.6, .2), m2:rnd(10, 40, 5)}; if (p.m1 !== p.m2 && this.ans(p) < 2.2 && this.ans(p) > .3) return p; } }, ans:p => p.m1 * p.d1 / p.m2, view:() => [-3, 3, 1.5],
+  sim(p, x){ const tL = p.m1 * g * p.d1, tR = p.m2 * g * x, hit = within(x, p.m1 * p.d1 / p.m2, .03), I = p.m1 * p.d1 ** 2 + p.m2 * x * x, al = Math.abs(tR - tL) / I, stop = Math.asin(.75 / 2.5), sign = tR > tL ? 1 : -1;
+    return {T:hit ? 1 : clamp(Math.sqrt(2 * stop / al), .5, 4), hit, miss:`The ${tR > tL ? 'right' : 'left'} side dropped. Your load was ${shortLong(x, p.m1 * p.d1 / p.m2, 'm')}.`, facts:[`Left torque: ${p.m1}·9.8·${p.d1} = ${f(tL)} N·m`, `Right torque: ${p.m2}·9.8·${f(x)} = ${f(tR)} N·m`, `Net torque: ${f(Math.abs(tR - tL))} N·m`],
+      draw(t, D){ const ang = hit || !x ? 0 : sign * Math.min(stop, .5 * al * t * t); D.ground(); D.pivot(0, .8); const P = q => [q * Math.cos(ang), .8 - q * Math.sin(ang)]; D.beam(P(-2.5), P(2.5));
+        const [lx, ly] = P(-p.d1); D.weight(lx, ly, `${p.m1} kg`, .3, ang); if (x){ const [rx, ry] = P(Math.min(x, 2.5)); D.weight(rx, ry, `${p.m2} kg`, .3, ang); D.force(rx, ry, 0, -1, ''); } D.force(lx, ly, 0, -1, ''); D.dim(-p.d1, 0, .25, `${p.d1} m`); return [`left ${f(tL)} N·m`, `right ${f(tR)} N·m`]; }}; },
+  steps:(p, a) => [`Balance the torques: <span class="m">m₁g·d₁ = m₂g·x</span>`, `g cancels: <span class="m">x = m₁d₁/m₂ = ${p.m1}·${p.d1}/${p.m2} = ${f(a)} m</span>`]},
+
+{ch:3, name:'The heavy beam', sym:'x', unit:'m', word:'distance from the pivot',
+  story:p => `A uniform <b>${p.L} m</b> beam of <b>${p.M} kg</b> rests on a pivot <b>${p.p} m</b> from its left end, so its long side wants to drop. Where left of the pivot should a <b>${p.m} kg</b> counterweight go to balance it?`,
+  eqs:['A uniform beam acts at its center', 'τ = F·d', 'Στ = 0'], idea:'Treat the beam as a single weight at its center. The distance that matters is from the pivot to the center of the beam.',
+  gen(){ for (;;){ const L = rnd(4, 6, 1), p = {L, M:rnd(10, 30, 5), p:rnd(1, L / 2 - .4, .2), m:rnd(15, 40, 5)}; const x = this.ans(p); if (x > .3 && x < p.p * .9) return p; } }, ans:p => p.M * (p.L / 2 - p.p) / p.m, view:p => [-p.p - .6, p.L - p.p + .6, 1.5],
+  sim(p, x){ const arm = p.L / 2 - p.p, tB = p.M * g * arm, tW = p.m * g * x, hit = within(x, p.M * arm / p.m, .03), I = p.M * (p.L ** 2 / 12 + arm ** 2) + p.m * x * x, al = Math.abs(tW - tB) / I, leftDown = tW > tB, stop = Math.min(.5, Math.asin(.75 / (leftDown ? p.p : p.L - p.p))), sign = leftDown ? -1 : 1;
+    return {T:hit ? 1 : clamp(Math.sqrt(2 * stop / al), .5, 4), hit, miss:`The ${tW > tB ? 'left' : 'right'} side dropped. The counterweight was ${shortLong(x, p.M * arm / p.m, 'm')}.`, facts:[`Beam's center is ${f(arm)} m from the pivot`, `Beam torque: ${f(tB)} N·m`, `Counterweight torque: ${f(tW)} N·m`],
+      draw(t, D){ const ang = hit || !x ? 0 : sign * Math.min(stop, .5 * al * t * t); D.ground(); D.pivot(0, .8); const P = q => [q * Math.cos(ang), .8 - q * Math.sin(ang)]; D.beam(P(-p.p), P(p.L - p.p));
+        const [cx, cy] = P(arm); D.mark(cx, cy, 'center'); D.force(cx, cy, 0, -1, 'Mg'); if (x){ const [wx, wy] = P(-Math.min(x, p.p)); D.weight(wx, wy, `${p.m} kg`, .3, ang); D.force(wx, wy, 0, -1, ''); } return [`beam ${f(tB)} N·m`, `weight ${f(tW)} N·m`]; }}; },
+  steps:(p, a) => { const arm = p.L / 2 - p.p; return [`Beam's center from the pivot: <span class="m">${p.L}/2 − ${p.p} = ${f(arm)} m</span>`, `Balance: <span class="m">m·x = M·${f(arm)}</span>`, `<span class="m">x = ${p.M}·${f(arm)}/${p.m} = ${f(a)} m</span>`]; }},
+
+{ch:3, name:'Flywheel launcher', sym:'τ', unit:'N·m', word:'torque',
+  story:p => `A flywheel with moment of inertia <b>I = ${p.I} kg·m²</b> and radius <b>${p.r} m</b> starts from rest and spins up for <b>${p.t} s</b> under constant torque. It then flings a ball horizontally from its top, <b>${p.H} m</b> above the floor. The ball must land <b>${p.d} m</b> away. What torque do you need?`,
+  eqs:['τ = Iα', 'ω = αt', 'v = ωr', 't_fall = √(2H/g)'], idea:'Work backward from the landing. The rim speed gives ω, the spin-up time gives α, and τ = Iα is the rotational version of F = ma.',
+  gen:() => ({I:rnd(.4, 1.2, .2), r:rnd(.3, .5, .1), t:rnd(1, 2, .5), H:rnd(1.2, 2, .2), d:rnd(2, 5, 1)}), ans:p => p.I * p.d / fallTime(p.H) / (p.r * p.t), view:p => [-.9, p.d * 1.4, p.H * 1.35],
+  sim(p, tau){ const al = tau / p.I, om = al * p.t, v = om * p.r, tf = fallTime(p.H), land = v * tf, hit = within(land, p.d, .03);
+    return {T:p.t + tf, hit, miss:`The ball landed ${shortLong(land, p.d, 'm')}.`, facts:[`α = τ/I = ${f(al)} rad/s²`, `ω after ${p.t} s = ${f(om)} rad/s`, `Rim speed: ${f(v)} m/s, so it lands ${f(land)} m out`],
+      draw(t, D){ D.ground(); const cy = p.H - p.r; D.tower(0, cy); D.pad(p.d, .03 * p.d); D.dim(0, p.d, -p.H * .1, `${p.d} m`); const spin = t < p.t ? .5 * al * t * t : .5 * al * p.t * p.t + om * (t - p.t); D.wheel(0, cy, p.r, spin);
+        if (t < p.t){ const a = -Math.PI / 2 + spin - .5 * al * p.t * p.t;   // reaches the top exactly at release
+          D.ball(p.r * Math.cos(a), cy + -p.r * Math.sin(a), .06); return [`t ${f(t)} s`, `ω ${f(al * t)} rad/s`, `spinning up`]; }
+        const q = t - p.t, x = v * q, y = p.H - .5 * g * q * q; D.ball(x, y, .06); D.vel(x, y, v, -g * q); return [`t ${f(t)} s`, `x ${f(x)} m`, `ω ${f(om)} rad/s`]; }}; },
+  steps:(p, a) => { const tf = fallTime(p.H), v = p.d / tf, om = v / p.r, al = om / p.t; return [`Speed needed: <span class="m">v = ${p.d}/√(2·${p.H}/9.8) = ${f(v)} m/s</span>`, `Spin rate: <span class="m">ω = v/r = ${f(om)} rad/s</span>`, `Angular acceleration: <span class="m">α = ω/t = ${f(al)} rad/s²</span>`, `Torque: <span class="m">τ = Iα = ${p.I}·${f(al)} = ${f(a)} N·m</span>`]; }},
+
+{ch:3, name:'Rolling start', sym:'h', unit:'m', word:'ramp height',
+  story:p => `A solid cylinder rolls without slipping down a ramp, then off a table <b>${p.H} m</b> high. It must land <b>${p.d} m</b> from the edge. From what height on the ramp, above the tabletop, should you release it? For a solid cylinder, I = ½mr².`,
+  eqs:['mgh = ½mv² + ½Iω²', 'ω = v/r', 'I = ½mr²', 'So v² = (4/3)gh'], idea:'A rolling object shares its energy between moving and spinning, so it ends up slower than a sliding object released from the same height.',
+  gen:() => ({H:rnd(.8, 1.4, .2), d:rnd(.8, 1.8, .2)}), ans:p => { const v = p.d / fallTime(p.H); return .75 * v * v / g; }, view:p => { const a = LEVELS[15].ans(p); return [-.6 - a * 2.25, p.d * 1.5, p.H + a * 1.35 + .2]; },
+  sim(p, h){ const v = Math.sqrt(4 / 3 * g * h), tf = fallTime(p.H), land = v * tf, hit = within(land, p.d, .03), sn = .5, L = h / sn, a = 2 / 3 * g * sn, T1 = h > 0 ? v / a : 0, T2 = v > 0 ? .36 / v : 0, slide = Math.sqrt(2 * g * h);
+    return {T:T1 + T2 + tf, hit, miss:`The cylinder landed ${shortLong(land, p.d, 'm')}.`, facts:[`Speed at the bottom: √(4gh/3) = ${f(v)} m/s`, `A frictionless slide from the same height would reach ${f(slide)} m/s`, `Distance: ${f(v)} × ${f(tf)} = ${f(land)} m`],
+      draw(t, D){ const c = Math.cos(30 * RAD), y = p.H, x0 = -.4, h2 = Math.max(h, .3), L2 = h2 / sn; D.bench(-6, 0, y); D.slope(x0 - L2 * c, y, x0, y, true, h2); D.pad(p.d, .03 * p.d); D.dim(0, p.d, -.12, `${p.d} m`); D.vdim(-.08, 0, y, `${p.H} m`);
+        const R = .08; let bx, by, sp, path; if (t < T1){ const q = .5 * a * t * t, rem = L - q; bx = x0 - rem * c + R * sn; by = y + rem * sn - R + R * c; sp = a * t; path = q; } else if (t < T1 + T2){ bx = x0 + R * sn + v * (t - T1); by = y; sp = v; path = L + v * (t - T1); } else { const q = t - T1 - T2; bx = v * q; by = y - .5 * g * q * q; sp = v; path = L + .36 + v * q; }
+        D.roller(bx, by + R, R, path / R); return [`t ${f(t)} s`, `v ${f(sp)} m/s`, `height ${f(by)} m`]; }}; },
+  steps:(p, a) => { const v = p.d / fallTime(p.H); return [`Speed needed: <span class="m">v = ${p.d}/√(2·${p.H}/9.8) = ${f(v)} m/s</span>`, `Energy with rolling: <span class="m">mgh = ½mv² + ½(½mr²)(v/r)² = ¾mv²</span>`, `Solve for h: <span class="m">h = 3v²/(4g) = 3·${f(v)}²/(4·9.8) = ${f(a)} m</span>`]; }},
+];
+
+/* ---------- link settings: ?level=1..16 & the level's numbers & mode=test & solution=0 ---------- */
+const URLQ = new URLSearchParams(location.search);
+const LINK = (() => {
+  const raw = (URLQ.get('level') || '').trim();
+  if (!raw) return null;
+  let i = -1;
+  const dot = raw.match(/^(\d+)\.(\d+)$/);   // chapter.level, as shown on the buttons, e.g. 2.3
+  if (dot){ const ch = +dot[1] - 1, n = +dot[2]; let k = 0; LEVELS.forEach((L, j) => { if (L.ch === ch && ++k === n) i = j; }); }
+  else if (/^\d+$/.test(raw)) i = +raw - 1;   // 1 to 16, counting straight through
+  if (!LEVELS[i]) return null;
+  const p = LEVELS[i].gen(), given = [];
+  for (const k of Object.keys(p)){ const v = parseFloat(URLQ.get(k)); if (isFinite(v)){ p[k] = v; given.push(k); } }
+  return {i, p, given};
+})();
+const MODE = (URLQ.get('mode') || '').toLowerCase();
+const TEST = !!LINK && MODE === 'test';             // picture of the setup only; students answer elsewhere
+const NOSOL = URLQ.get('solution') === '0';         // never show the worked solution
+const LOCK = !!LINK;                                // one level, numbers fixed by the link
+if (LOCK) $('app').classList.add('locked');
+if (TEST){ document.documentElement.classList.add('bare'); $('app').classList.add('bare'); }
+if (LOCK){ $('btnFresh').hidden = true; $('btnNext').hidden = true; }
+if (NOSOL) $('btnSolve').hidden = true;
+
+/* ---------- saved progress (this browser only; not used when opened from a link) ---------- */
+const store = {
+  get(k, d){ if (LOCK) return d; try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v ?? d; } catch (e) { return d; } },
+  set(k, v){ if (LOCK) return; try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+let best = store.get('proving-ground-best', {});   // level index -> stars; -1 means finished with the worked solution
+const S = {cur:0, p:null, tries:0, helped:false, solved:false, run:null, shown:null, last:null, strobe:[], fx:[], banner:null, lastD:null};
+
+const cv = $('scene'), ctx = cv.getContext('2d');
+let W = 640, H = 360;
+/* ---------- the test site: a painted backdrop that changes with each chapter ---------- */
+const THEMES = [
+  {sky:['#6fb2e8', '#bfe2f0', '#fde6c2'], glow:[.8, .3, '#fff4cf', 26], far:'#a3b8cc', mid:'#c09c78', near:'#8d6d50', ground:['#d0ad7e', '#a07e52'], speck:'#7d6040', cloud:'rgba(255,255,255,.8)', stars:0},
+  {sky:['#2f82d0', '#86c6ee', '#e0f2f4'], glow:[.2, .14, '#ffffff', 22], far:'#8cb0bc', mid:'#7f9f78', near:'#587a52', ground:['#bcb196', '#8f8570'], speck:'#6a6250', cloud:'rgba(255,255,255,.9)', stars:0},
+  {sky:['#2e2358', '#b4457c', '#ffb160'], glow:[.28, .7, '#ffdc8e', 46], far:'#6d4080', mid:'#4c2e62', near:'#301d3d', ground:['#7b4f54', '#49303f'], speck:'#2e1c2a', cloud:'rgba(255,190,170,.45)', stars:50},
+  {sky:['#060c22', '#13234c', '#2f4c7c'], glow:[.82, .16, '#e6edf8', 20], far:'#1d3154', mid:'#142540', near:'#0c182b', ground:['#2e3f54', '#172230'], speck:'#0c141e', cloud:'rgba(150,175,215,.14)', stars:190, flood:true},
+];
+const GROUND = 58;   // height of the ground strip below the surface line, in pixels
+const INK = '#10161e', STEEL = '#8d9cab', VEL = '#3dffa2', FORCE = '#ff6b5e', LABEL = '#f3f6f9';
+let backdrop = null, backdropKey = '';
+const seeded = n => () => { n = (n + 0x6D2B79F5) | 0; let t = Math.imul(n ^ (n >>> 15), 1 | n); t ^= t + Math.imul(t ^ (t >>> 7), 61 | t); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+function ridge(c, base, amp, flat, color, seed){
+  const r = seeded(seed), ph = [r() * 9, r() * 9, r() * 9], w = W + 8;
+  c.fillStyle = color; c.beginPath(); c.moveTo(-4, base);
+  for (let x = -4; x <= w; x += 4){
+    const u = x / W, n = Math.sin(u * 5 + ph[0]) * .5 + Math.sin(u * 13 + ph[1]) * .3 + Math.sin(u * 29 + ph[2]) * .12;
+    const y = flat ? Math.round(Math.max(n, -.15) * 4) / 4 : n;   // flat tops read as desert mesas
+    c.lineTo(x, base - amp * (.55 + y * .6));
+  }
+  c.lineTo(w, base); c.closePath(); c.fill();
+}
+function paintBackdrop(ch){
+  const key = `${ch}:${W}x${H}:${devicePixelRatio || 1}`;
+  if (key === backdropKey && backdrop) return backdrop;
+  const dpr = devicePixelRatio || 1, off = document.createElement('canvas');
+  off.width = Math.round(W * dpr); off.height = Math.round(H * dpr);
+  const c = off.getContext('2d'), T = THEMES[ch], gy = H - GROUND, r = seeded(ch * 97 + 11);
+  c.scale(dpr, dpr);
+  const sky = c.createLinearGradient(0, 0, 0, gy);
+  sky.addColorStop(0, T.sky[0]); sky.addColorStop(.6, T.sky[1]); sky.addColorStop(1, T.sky[2]);
+  c.fillStyle = sky; c.fillRect(0, 0, W, gy + 2);
+  for (let i = 0; i < T.stars; i++){ c.fillStyle = `rgba(255,255,255,${.25 + r() * .7})`; const s = r() < .12 ? 1.8 : 1; c.fillRect(r() * W, r() * gy * .75, s, s); }
+  const [gx, gyy, gc, gr] = T.glow, sx = gx * W, sy = gyy * gy;
+  const halo = c.createRadialGradient(sx, sy, 2, sx, sy, gr * 7);
+  halo.addColorStop(0, gc); halo.addColorStop(.18, gc + '88'); halo.addColorStop(1, gc + '00');
+  c.fillStyle = halo; c.fillRect(0, 0, W, gy);
+  c.fillStyle = gc; c.beginPath(); c.arc(sx, sy, gr, 0, 7); c.fill();
+  for (let i = 0; i < 6; i++){
+    const cx = r() * W, cy = gy * (.1 + r() * .4), sc = 24 + r() * 46; c.fillStyle = T.cloud;
+    for (let k = 0; k < 6; k++){ c.beginPath(); c.ellipse(cx + (k - 2.5) * sc * .55, cy + (r() - .5) * sc * .18, sc * (.5 + r() * .4), sc * (.14 + r() * .1), 0, 0, 7); c.fill(); }
+  }
+  ridge(c, gy + 2, gy * .3, false, T.far, ch + 5);
+  ridge(c, gy + 2, gy * .2, true, T.mid, ch + 21);
+  ridge(c, gy + 2, gy * .09, false, T.near, ch + 40);
+  // site buildings along the skyline
+  c.fillStyle = c.strokeStyle = T.near; c.lineWidth = 2;
+  const base = gy + 1, wt = W * .63;
+  c.fillRect(wt - 15, base - 58, 30, 15); c.beginPath(); c.moveTo(wt - 12, base - 44); c.lineTo(wt - 18, base); c.moveTo(wt + 12, base - 44); c.lineTo(wt + 18, base); c.moveTo(wt - 16, base - 22); c.lineTo(wt + 16, base - 22); c.stroke();
+  const rd = W * .9; c.fillRect(rd - 2, base - 34, 4, 34); c.beginPath(); c.arc(rd + 6, base - 42, 17, Math.PI * .55, Math.PI * 1.55); c.closePath(); c.fill();
+  const ml = W * .13; c.fillRect(ml - 1.5, base - 66, 3, 66); c.fillRect(ml - 11, base - 70, 22, 6);
+  c.fillRect(W * .36, base - 13, 58, 13); c.beginPath(); c.moveTo(W * .36 - 5, base - 13); c.lineTo(W * .36 + 29, base - 26); c.lineTo(W * .36 + 63, base - 13); c.fill();
+  c.lineWidth = 1; for (let x = 6; x < W; x += 30){ c.beginPath(); c.moveTo(x, base); c.lineTo(x, base - 7); c.stroke(); }
+  c.beginPath(); c.moveTo(0, base - 5); c.lineTo(W, base - 5); c.stroke();
+  const gd = c.createLinearGradient(0, gy, 0, H);
+  gd.addColorStop(0, T.ground[0]); gd.addColorStop(1, T.ground[1]);
+  c.fillStyle = gd; c.fillRect(0, gy, W, GROUND);
+  for (let i = 0; i < 260; i++){ const u = r(), py = gy + u * u * GROUND; c.fillStyle = T.speck; c.globalAlpha = .1 + r() * .3; const s = 1 + u * 2.4; c.fillRect(r() * W, py, s * (1 + r() * 3), s * .6); }
+  c.globalAlpha = 1;
+  if (T.flood) for (const [mx, sw] of [[ml, 1], [W * .63, -1]]){
+    const lg = c.createLinearGradient(0, 40, 0, gy + 30);
+    lg.addColorStop(0, 'rgba(255,240,190,.3)'); lg.addColorStop(1, 'rgba(255,240,190,.03)');
+    c.fillStyle = lg; c.beginPath(); c.moveTo(mx - 7, base - 66); c.lineTo(mx + 7, base - 66); c.lineTo(mx + sw * W * .36 + 150, gy + 30); c.lineTo(mx + sw * W * .36 - 150, gy + 30); c.closePath(); c.fill();
+    c.fillStyle = '#fff4cf'; c.beginPath(); c.arc(mx, base - 67, 3.5, 0, 7); c.fill();
+  }
+  backdrop = off; backdropKey = key;
+  return off;
+}
+
+/* ---------- objects, drawn in world units so everything stays to scale ---------- */
+function makeDraw(view){
+  const [x0, x1, ymax] = view, top = 46;
+  const scale = Math.min((W - 24) / (x1 - x0), (H - GROUND - top) / ymax);
+  const ox = 12 + ((W - 24) - (x1 - x0) * scale) / 2 - x0 * scale, oy = H - GROUND;
+  const X = x => ox + x * scale, Y = y => oy - y * scale, px = n => n * scale, gy = Y(0);
+  let shadowFrom = -Infinity;
+  const line = (a, b, c, d) => { ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke(); };
+  const rr = (x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); };
+  const text = (s, x, y, align = 'center', c = LABEL, size = 13) => {
+    if (!s) return;
+    ctx.font = `600 ${size}px "IBM Plex Mono", Menlo, monospace`; ctx.textAlign = align;
+    const w = ctx.measureText(s).width, lx = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+    ctx.fillStyle = 'rgba(10,14,20,.74)'; rr(lx - 4, y - size + 1, w + 8, size + 5, 3); ctx.fill();
+    ctx.fillStyle = c; ctx.fillText(s, x, y);
+  };
+  const arrow = (a, b, c, d, color, label) => {
+    const L = Math.hypot(c - a, d - b); if (L < 4) return;
+    const ux = (c - a) / L, uy = (d - b) / L, h = 10;
+    for (const [col2, wd, grow] of [['rgba(5,8,12,.75)', 6, 2], [color, 3, 0]]){
+      ctx.strokeStyle = ctx.fillStyle = col2; ctx.lineWidth = wd; line(a, b, c - ux * h, d - uy * h);
+      ctx.beginPath(); ctx.moveTo(c + ux * grow, d + uy * grow); ctx.lineTo(c - ux * h - uy * (6 + grow), d - uy * h + ux * (6 + grow)); ctx.lineTo(c - ux * h + uy * (6 + grow), d - uy * h - ux * (6 + grow)); ctx.closePath(); ctx.fill();
+    }
+    if (label) text(label, c + ux * 9, d + uy * 9 + 4, ux < -.3 ? 'right' : ux > .3 ? 'left' : 'center', color, 12);
+  };
+  const shadow = (x, R, y) => {
+    if (x < shadowFrom) return;
+    const lift = clamp(y * scale / 260, 0, 1);
+    ctx.fillStyle = `rgba(0,0,0,${.42 - lift * .28})`; ctx.beginPath(); ctx.ellipse(X(x), gy + 3, R * (1.1 + lift), R * .26, 0, 0, 7); ctx.fill();
+  };
+  const metalGrad = (a, b, c, d, stops = ['#dfe6ec', '#8d9cab', '#55626f']) => { const m = ctx.createLinearGradient(a, b, c, d); stops.forEach((s, i) => m.addColorStop(i / (stops.length - 1), s)); return m; };
+  const hazard = (x, y, w, h) => { ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); ctx.fillStyle = '#f2c230'; ctx.fillRect(x, y, w, h); ctx.fillStyle = '#17191d'; for (let i = -h; i < w; i += 18){ ctx.beginPath(); ctx.moveTo(x + i, y + h); ctx.lineTo(x + i + 9, y + h); ctx.lineTo(x + i + 9 + h, y); ctx.lineTo(x + i + h, y); ctx.fill(); } ctx.restore(); };
+  // a box whose base sits at the origin: wooden crate, or a dark puck when it is thin
+  const box = (w, h) => {
+    if (h < 16){
+      ctx.fillStyle = metalGrad(0, -h, 0, 0, ['#5c6773', '#2a313a', '#12161b']); rr(-w / 2, -h, w, h, 3); ctx.fill();
+      ctx.fillStyle = '#ff8a2a'; ctx.fillRect(-w / 2 + 3, -h * .62, w - 6, Math.max(2, h * .22));
+      return;
+    }
+    const g2 = ctx.createLinearGradient(0, -h, 0, 0); g2.addColorStop(0, '#d9a766'); g2.addColorStop(1, '#a4713c');
+    ctx.fillStyle = g2; ctx.fillRect(-w / 2, -h, w, h);
+    ctx.strokeStyle = 'rgba(70,40,15,.55)'; ctx.lineWidth = 1;
+    for (let k = 1; k < 4; k++){ const y = -h + h * k / 4; line(-w / 2, y, w / 2, y); }
+    const b = Math.max(3, w * .1);
+    ctx.fillStyle = '#7c5228'; ctx.fillRect(-w / 2, -h, w, b); ctx.fillRect(-w / 2, -b, w, b); ctx.fillRect(-w / 2, -h, b, h); ctx.fillRect(w / 2 - b, -h, b, h);
+    ctx.strokeStyle = '#7c5228'; ctx.lineWidth = b * .8; line(-w / 2 + b, -b, w / 2 - b, -h + b);
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(-w / 2, -h, w, h);
+  };
+  const D = {
+    x:X, y:Y, moving:null,
+    ground(){
+      let step = 1; for (const s of [1, 2, 5, 10, 20]){ step = s; if (px(s) >= 46) break; }
+      const rule = lv().ch >= 2 ? '#e4eaf0' : 'rgba(10,14,20,.85)'; ctx.strokeStyle = ctx.fillStyle = rule; ctx.lineWidth = 1.5; line(0, gy, W, gy);
+      ctx.font = '600 11px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'center';
+      for (let m = Math.ceil(x0 / step) * step; m <= x1 + .01; m += step){ line(X(m), gy, X(m), gy + 6); ctx.fillText(`${m}`, X(m), gy + 17); }
+    },
+    bench(a, b, h){
+      D.ground(); shadowFrom = b;
+      const lx = Math.max(X(a), -8), w = X(b) - lx, ty = Y(h), bh = gy - ty, m = ctx.createLinearGradient(lx, 0, X(b), 0);
+      m.addColorStop(0, '#6f7a85'); m.addColorStop(.75, '#9aa6b1'); m.addColorStop(1, '#c0cad3');
+      ctx.fillStyle = m; ctx.fillRect(lx, ty, w, bh);
+      ctx.strokeStyle = 'rgba(20,28,36,.3)'; ctx.lineWidth = 1;
+      for (let y = ty + 26; y < gy; y += 26) line(lx, y, X(b), y);
+      for (let x = X(b) - 44; x > lx; x -= 44) line(x, ty, x, gy);
+      hazard(lx, ty, w, 7);
+      ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(lx, ty, w, bh);
+    },
+    tower(x, h){
+      const w = Math.max(20, px(.3)), l = X(x) - w / 2, ty = Y(h);
+      ctx.strokeStyle = '#3a4653'; ctx.lineWidth = 3; line(l, ty, l, gy); line(l + w, ty, l + w, gy);
+      ctx.lineWidth = 1.5; const n = Math.max(2, Math.round((gy - ty) / w));
+      for (let i = 0; i < n; i++){ const a = ty + (gy - ty) * i / n, b = ty + (gy - ty) * (i + 1) / n; line(l, a, l + w, b); line(l + w, a, l, b); line(l, a, l + w, a); }
+      ctx.fillStyle = metalGrad(l, 0, l + w, 0); ctx.fillRect(l - 5, ty - 3, w + 10, 6);
+    },
+    pad(x, w, y = 0){
+      const rx = Math.max(9, px(w)), cx = X(x), cy = Y(y) + 1, ry = Math.min(9, rx * .34);
+      ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(cx, cy + 2, rx + 3, ry + 1, 0, 0, 7); ctx.fill();
+      for (const [k, c] of [[1, '#f4f6f8'], [.72, '#e0322a'], [.46, '#f4f6f8'], [.22, '#e0322a']]){ ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(cx, cy, rx * k, ry * k, 0, 0, 7); ctx.fill(); }
+      ctx.strokeStyle = '#ff9c2b'; ctx.lineWidth = 2; line(cx, cy - ry - 14, cx, cy - ry - 2);
+      ctx.fillStyle = '#ff9c2b'; ctx.beginPath(); ctx.moveTo(cx, cy - ry - 1); ctx.lineTo(cx - 5, cy - ry - 9); ctx.lineTo(cx + 5, cy - ry - 9); ctx.fill();
+    },
+    flag(x, y){
+      const cx = X(x), cy = Y(y), tt = reduceMotion ? 0 : performance.now() / 260;
+      ctx.strokeStyle = '#dfe6ec'; ctx.lineWidth = 2.5; line(cx, cy, cx, cy - 46);
+      ctx.fillStyle = '#ff6a1f'; ctx.beginPath(); ctx.moveTo(cx, cy - 46);
+      for (let i = 0; i <= 8; i++) ctx.lineTo(cx + i * 3.4, cy - 46 + i * .9 + Math.sin(tt + i * .8) * i * .4);
+      for (let i = 8; i >= 0; i--) ctx.lineTo(cx + i * 3.4, cy - 26 - i * .9 + Math.sin(tt + i * .8) * i * .4);
+      ctx.closePath(); ctx.fill();
+    },
+    ball(x, y, r = 0, label, rolled){
+      const R = Math.max(6.5, r ? px(r) : 9), cx = X(x), cy = Y(y) - (r ? 0 : R); shadow(x, R, y);
+      const m = ctx.createRadialGradient(cx - R * .38, cy - R * .42, R * .08, cx, cy, R * 1.05);
+      m.addColorStop(0, '#fff3e0'); m.addColorStop(.25, '#ff9a3d'); m.addColorStop(.75, '#d14c0e'); m.addColorStop(1, '#6e2505');
+      ctx.fillStyle = m; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
+      ctx.strokeStyle = 'rgba(20,10,5,.75)'; ctx.lineWidth = 1.2; ctx.stroke();
+      if (rolled != null){ const a = px(rolled) / R; ctx.fillStyle = '#fff3e0'; for (const k of [0, Math.PI]){ ctx.beginPath(); ctx.arc(cx + R * .55 * Math.cos(a + k), cy + R * .55 * Math.sin(a + k), R * .17, 0, 7); ctx.fill(); } }   // two marks so the turning shows
+      if (label){ ctx.fillStyle = '#fff'; ctx.font = '700 12px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText(label, cx, cy + 4); }
+      D.moving = [cx, cy, R];
+    },
+    cart(x, h, label, y = 0, ang = 0, roll = x){
+      const w = Math.max(34, px(h * 1.3)), ht = Math.max(15, px(h * .5)), wr = Math.max(5.5, w * .14); if (!ang && !y) shadow(x, w * .42, 0);
+      ctx.save(); ctx.translate(X(x), Y(y)); ctx.rotate(-ang);
+      const b = -wr * 1.5;
+      const body = ctx.createLinearGradient(0, b - ht, 0, b); body.addColorStop(0, '#ff9440'); body.addColorStop(.5, '#e4570f'); body.addColorStop(1, '#94340a');
+      ctx.fillStyle = body; rr(-w / 2, b - ht, w, ht, 3); ctx.fill();
+      ctx.fillStyle = metalGrad(0, b - 3, 0, b + 1); ctx.fillRect(-w / 2 - 1, b - 2, w + 2, 3);
+      ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(-w / 2 + 3, b - ht + 2, w - 6, 2);
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.5; rr(-w / 2, b - ht, w, ht, 3); ctx.stroke();
+      for (const s of [-1, 1]){
+        const wx = s * w * .3, a = px(roll) / wr;
+        ctx.fillStyle = '#14181d'; ctx.beginPath(); ctx.arc(wx, -wr, wr, 0, 7); ctx.fill();
+        ctx.fillStyle = metalGrad(wx - wr, -wr * 2, wx + wr, 0); ctx.beginPath(); ctx.arc(wx, -wr, wr * .58, 0, 7); ctx.fill();
+        ctx.strokeStyle = '#14181d'; ctx.lineWidth = 1.5; for (let k = 0; k < 2; k++){ const q = a + k * Math.PI / 2; line(wx - wr * .55 * Math.cos(q), -wr - wr * .55 * Math.sin(q), wx + wr * .55 * Math.cos(q), -wr + wr * .55 * Math.sin(q)); }
+      }
+      if (label){ ctx.fillStyle = '#fff'; ctx.font = '700 12px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText(label, 0, b - ht / 2 + 4); }
+      ctx.restore();
+      D.moving = [X(x), Y(y) - ht, wr];
+    },
+    crate(x, y, ang, w, h){
+      const bw = Math.max(18, px(w)), bh = Math.max(9, px(h));
+      ctx.save(); ctx.translate(X(x), Y(y)); ctx.rotate(-ang); box(bw, bh); ctx.restore();
+      D.moving = [X(x) - Math.sin(ang) * bh / 2, Y(y) - Math.cos(ang) * bh / 2, 8];
+    },
+    block(x, y, w, h, label){
+      const bw = Math.max(20, px(w)), bh = Math.max(18, px(h)); if (y === 0) shadow(x, bw * .55, 0);
+      ctx.save(); ctx.translate(X(x), Y(y)); box(bw, bh); ctx.restore();
+      if (label) text(label, X(x) + bw / 2 + 6, Y(y) - bh / 2 + 4, 'left', LABEL, 12);
+      D.moving = [X(x), Y(y) - bh / 2, 8];
+    },
+    slope(a, b, c, d, reverse, hh){
+      shadowFrom = Infinity;
+      const pts = reverse ? [[X(a), Y(b + hh)], [X(c), Y(d)], [X(a), Y(d)]] : [[X(a), Y(b)], [X(c), Y(d)], [X(c), Y(b)]];
+      const path = () => { ctx.beginPath(); pts.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.closePath(); };
+      ctx.save(); path(); ctx.clip();
+      const yt = Math.min(pts[0][1], pts[1][1]), yb = Math.max(pts[0][1], pts[1][1], pts[2][1]);
+      ctx.fillStyle = metalGrad(0, yt, 0, yb, ['#7d8c9b', '#566472', '#333e49']); ctx.fillRect(Math.min(pts[0][0], pts[1][0], pts[2][0]) - 2, yt - 2, Math.abs(X(c) - X(a)) + 4, yb - yt + 4);
+      ctx.strokeStyle = 'rgba(205,216,226,.5)'; ctx.lineWidth = 2;
+      const l = Math.min(X(a), X(c)), r2 = Math.max(X(a), X(c));
+      for (let x = l, s = 1; x < r2; x += 42, s = -s){ line(x, yb, x, yt); line(x, s > 0 ? yb : yt, x + 42, s > 0 ? yt : yb); }
+      ctx.restore();
+      ctx.strokeStyle = INK; ctx.lineWidth = 2; path(); ctx.stroke();
+      const q0 = reverse ? pts[0] : pts[0], q1 = pts[1];
+      ctx.strokeStyle = '#e9eef3'; ctx.lineWidth = 4; line(q0[0], q0[1], q1[0], q1[1]);
+    },
+    angle(x, y, deg){ const R = 60, a = deg * RAD; ctx.strokeStyle = '#f3f6f9'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X(x), Y(y), R, 0, -a, true); ctx.stroke(); text(`${deg}°`, X(x) + (R + 8) * Math.cos(a / 2), Y(y) - (R + 8) * Math.sin(a / 2) + 5, 'left', LABEL, 13); },
+    wall(x){ const h = Math.max(48, px(.5)), w = 20, l = X(x) - w; ctx.fillStyle = metalGrad(l, 0, l + w, 0, ['#5d6873', '#a6b1bb']); ctx.fillRect(l, gy - h, w, h); hazard(l, gy - h, w, 7); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(l, gy - h, w, h); },
+    spring(a, b, y){
+      const n = 9, xa = X(a), xb = X(b), yy = Y(y), R = 11, st = (xb - xa) / n;
+      // each turn of the coil: down the front in bright steel, back up behind in shadow
+      for (const [c2, wd, back] of [['#4c5966', 3, true], ['rgba(8,12,16,.8)', 5.5, false], ['#e8eef3', 3, false]]){
+        ctx.strokeStyle = c2; ctx.lineWidth = wd; ctx.lineCap = 'round'; ctx.beginPath();
+        for (let i = 0; i < n; i++){ const sx = xa + st * i; if (back){ ctx.moveTo(sx + st * .5, yy + R); ctx.lineTo(sx + st, yy - R); } else { ctx.moveTo(sx, yy - R); ctx.lineTo(sx + st * .5, yy + R); } }
+        ctx.stroke(); ctx.lineCap = 'butt';
+      }
+      ctx.fillStyle = metalGrad(xb - 2, yy - 14, xb + 3, yy + 14); ctx.fillRect(xb - 2.5, yy - 15, 5, 30);
+    },
+    carpet(a, b){ ctx.fillStyle = '#a22a3c'; ctx.fillRect(X(a), gy - 5, X(b) - X(a), 6); ctx.fillStyle = '#d65a6a'; for (let x = X(a) + 2; x < X(b); x += 5) ctx.fillRect(x, gy - 6, 2, 2.5); },
+    pulley(x, y, r){ const R = px(r), cx = X(x), cy = Y(y); ctx.fillStyle = metalGrad(cx - R, cy - R, cx + R, cy + R); ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, 7); ctx.fill(); ctx.strokeStyle = 'rgba(10,8,5,.7)'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(cx, cy, R, -Math.PI / 2, 0); ctx.stroke(); ctx.strokeStyle = '#ecdcb6'; ctx.lineWidth = 1.8; ctx.stroke(); },
+    pusher(a, x, y){ const yy = Y(y) - 9, hx = X(x) - 10, ax = X(a); ctx.fillStyle = metalGrad(0, yy - 3, 0, yy + 3); ctx.fillRect(ax, yy - 2.5, hx - ax, 5); ctx.fillStyle = metalGrad(hx - 4, yy - 10, hx, yy + 10); ctx.fillRect(hx - 4, yy - 10, 5, 19); ctx.fillStyle = metalGrad(0, yy - 12, 0, yy + 9, ['#5c6773', '#2a313a']); ctx.fillRect(ax - 24, yy - 12, 26, 21); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(ax - 24, yy - 12, 26, 21); },
+    arm(a, b, c, d){ ctx.strokeStyle = '#3a4653'; ctx.lineWidth = 5; line(X(a), Y(b), X(c), Y(d)); },
+    string(a, b, c, d){ ctx.strokeStyle = 'rgba(10,8,5,.7)'; ctx.lineWidth = 3.5; line(X(a), Y(b), X(c), Y(d)); ctx.strokeStyle = '#ecdcb6'; ctx.lineWidth = 1.8; line(X(a), Y(b), X(c), Y(d)); },
+    launcher(x, y, deg, label){
+      const L = Math.max(46, px(1)), a = deg * RAD, cx = X(x), cy = Y(y) - 8;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(-a); ctx.fillStyle = metalGrad(0, -9, 0, 9, ['#c6d0d9', '#6b7886', '#27303a']); rr(-6, -8, L, 16, 3); ctx.fill(); ctx.fillStyle = '#1b2128'; ctx.fillRect(L - 11, -10, 6, 20); ctx.restore();
+      ctx.fillStyle = metalGrad(cx - 22, 0, cx + 22, 0, ['#55616d', '#a6b1bb', '#3b4651']); ctx.beginPath(); ctx.moveTo(cx - 24, gy); ctx.lineTo(cx - 13, cy - 7); ctx.lineTo(cx + 13, cy - 7); ctx.lineTo(cx + 24, gy); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
+      text(label, cx + L + 12, cy - 6, 'left', LABEL, 13);
+    },
+    trace(fn, t){ ctx.strokeStyle = 'rgba(255,240,180,.85)'; ctx.lineWidth = 2; ctx.setLineDash([2, 7]); ctx.lineCap = 'round'; ctx.beginPath(); for (let i = 0; i <= 40; i++){ const [a, b] = fn(t * i / 40); i ? ctx.lineTo(X(a), Y(b) - 9) : ctx.moveTo(X(a), Y(b) - 9); } ctx.stroke(); ctx.setLineDash([]); ctx.lineCap = 'butt'; },
+    pivot(x, h){ const w = px(.3), cx = X(x), ty = Y(h); ctx.fillStyle = metalGrad(cx - w, 0, cx + w, 0, ['#4a5662', '#a9b4be', '#3a4551']); ctx.beginPath(); ctx.moveTo(cx - 7, ty); ctx.lineTo(cx + 7, ty); ctx.lineTo(cx + w, gy); ctx.lineTo(cx - w, gy); ctx.closePath(); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = '#20262d'; ctx.fillRect(cx - w - 8, gy - 5, 2 * w + 16, 5); },
+    beam(a, b){
+      const ax = X(a[0]), ay = Y(a[1]), L = Math.hypot(X(b[0]) - ax, Y(b[1]) - ay), an = Math.atan2(Y(b[1]) - ay, X(b[0]) - ax);
+      ctx.save(); ctx.translate(ax, ay); ctx.rotate(an); ctx.fillStyle = metalGrad(0, -7, 0, 7, ['#f0f4f7', '#8d9cab', '#3a4551']); ctx.fillRect(0, -7, L, 14);
+      ctx.fillStyle = '#27303a'; ctx.fillRect(0, -2, L, 4); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(0, -7, L, 14); ctx.restore();
+    },
+    weight(x, y, label, s, ang = 0){
+      const w = Math.max(30, px(s));
+      ctx.save(); ctx.translate(X(x), Y(y) - 7 * Math.cos(ang)); ctx.rotate(ang);
+      ctx.strokeStyle = '#9aa7b4'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(0, -w * .95, w * .18, Math.PI, 0); ctx.stroke();
+      ctx.fillStyle = metalGrad(-w / 2, 0, w / 2, 0, ['#2a323b', '#6c7a88', '#1c232a']); ctx.beginPath(); ctx.moveTo(-w * .36, -w * .95); ctx.lineTo(w * .36, -w * .95); ctx.lineTo(w * .5, 0); ctx.lineTo(-w * .5, 0); ctx.closePath(); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.restore();
+      text(label, X(x), Y(y) - w - 32, 'center', LABEL, 12);
+    },
+    mark(x, y, label){ ctx.fillStyle = FORCE; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(X(x), Y(y), 6, 0, 7); ctx.fill(); ctx.stroke(); text(label, X(x), Y(y) - 16, 'center', LABEL, 12); },
+    wheel(x, y, r, a){
+      const R = px(r), cx = X(x), cy = Y(y);
+      ctx.fillStyle = metalGrad(cx - R, cy - R, cx + R, cy + R, ['#e6ecf1', '#7f8e9c', '#2d3741']); ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#242c35'; ctx.beginPath(); ctx.arc(cx, cy, R * .78, 0, 7); ctx.fill();
+      ctx.strokeStyle = '#a9b6c2'; ctx.lineWidth = Math.max(3, R * .09); for (let k = 0; k < 3; k++){ const b = a + k * Math.PI / 3; line(cx - R * .78 * Math.cos(b), cy - R * .78 * Math.sin(b), cx + R * .78 * Math.cos(b), cy + R * .78 * Math.sin(b)); }
+      ctx.fillStyle = metalGrad(cx - 8, cy - 8, cx + 8, cy + 8); ctx.beginPath(); ctx.arc(cx, cy, Math.max(6, R * .17), 0, 7); ctx.fill();
+    },
+    roller(x, y, r, a){
+      const R = Math.max(9, px(r)), cx = X(x), cy = Y(y); shadow(x, R, y - r);
+      ctx.fillStyle = metalGrad(cx - R, cy - R, cx + R, cy + R, ['#f0f4f7', '#94a3b1', '#3a4551']); ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
+      ctx.fillStyle = '#ff7a24'; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R * .86, a - .5, a + .5); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke();
+      ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(cx, cy, R * .14, 0, 7); ctx.fill();
+      D.moving = [cx, cy, R];
+    },
+    dim(a, b, y, label){
+      const v = y > 0 ? Y(y) : clamp(Y(y), gy + 33, H - 12);
+      ctx.strokeStyle = 'rgba(245,248,250,.9)'; ctx.lineWidth = 1.5; line(X(a), v, X(b), v); line(X(a), v - 5, X(a), v + 5); line(X(b), v - 5, X(b), v + 5);
+      text(label, (X(a) + X(b)) / 2, v + 5, 'center', LABEL, 13);
+    },
+    vdim(x, a, b, label){ ctx.strokeStyle = 'rgba(245,248,250,.9)'; ctx.lineWidth = 1.5; line(X(x), Y(a), X(x), Y(b)); line(X(x) - 5, Y(a), X(x) + 5, Y(a)); line(X(x) - 5, Y(b), X(x) + 5, Y(b)); text(label, X(x) - 8, (Y(a) + Y(b)) / 2 + 4, 'right', LABEL, 13); },
+    vel(x, y, vx, vy){ const k = 7, s = Math.hypot(vx, vy), m = s * k > 80 ? 80 / (s * k) : 1, o = D.moving, a = o ? o[0] : X(x), b = o ? o[1] : Y(y); arrow(a, b, a + vx * k * m, b - vy * k * m, VEL, 'v'); },
+    force(x, y, ux, uy, label, len = 42){ arrow(X(x), Y(y), X(x) + ux * len, Y(y) - uy * len, FORCE, label); },
+    // arrows drawn from the center of the object, lengths proportional to force, with the weight 46 px long
+    forcePx(cx, cy, ux, uy, label, len){ arrow(cx, cy, cx + ux * len, cy - uy * len, FORCE, label); },
+  };
+  return D;
+}
+function paint(sim, t){
+  ctx.drawImage(paintBackdrop(lv().ch), 0, 0, W, H);
+  for (const q of S.strobe){ ctx.globalAlpha = .34; ctx.fillStyle = '#fff3d6'; ctx.beginPath(); ctx.arc(q[0], q[1], q[2], 0, 7); ctx.fill(); ctx.globalAlpha = .6; ctx.strokeStyle = '#1b130a'; ctx.lineWidth = 1; ctx.stroke(); }
+  ctx.globalAlpha = 1;
+  const D = makeDraw(lv().view(S.p)), rd = sim.draw(t, D);
+  ctx.font = '600 14px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'left';
+  const s = TEST ? lv().name : rd.join('   '), w = ctx.measureText(s).width;   // in test mode the readout would only show zeros
+  ctx.fillStyle = 'rgba(10,14,20,.72)'; ctx.fillRect(8, 8, w + 20, 28);
+  ctx.fillStyle = '#7dffc1'; ctx.fillText(s, 18, 27);
+  for (const f2 of S.fx){ ctx.globalAlpha = clamp(f2.life, 0, 1); ctx.fillStyle = f2.c; ctx.fillRect(f2.x - f2.s / 2, f2.y - f2.s / 2, f2.s, f2.s); }
+  ctx.globalAlpha = 1;
+  if (S.banner){
+    const size = clamp(W / 11, 26, 58), a = reduceMotion ? 1 : clamp((S.banner.until - performance.now()) / 500, 0, 1);
+    ctx.globalAlpha = a; ctx.font = `400 ${size}px "Saira Stencil One", Impact, sans-serif`; ctx.textAlign = 'center';
+    ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(8,12,18,.85)'; ctx.lineJoin = 'round'; ctx.strokeText(S.banner.text, W / 2, 46 + size);
+    ctx.fillStyle = S.banner.c; ctx.fillText(S.banner.text, W / 2, 46 + size); ctx.globalAlpha = 1;
+  }
+  return D;
+}
+// Dust where the object stopped, and sparks when it was on target.
+function celebrate(sim){
+  const hitp = S.lastD && S.lastD.moving, cx = hitp ? hitp[0] : W / 2, cy = hitp ? hitp[1] : H / 2;
+  S.banner = {text:sim.hit ? 'ON TARGET' : 'MISS', c:sim.hit ? '#7dffc1' : '#ff8b7a', until:performance.now() + 1900};
+  if (!reduceMotion){
+    const n = sim.hit ? 46 : 16;
+    for (let i = 0; i < n; i++){
+      const a = -Math.random() * Math.PI, sp = 40 + Math.random() * (sim.hit ? 260 : 110);
+      S.fx.push({x:cx, y:cy, vx:Math.cos(a) * sp, vy:Math.sin(a) * sp, life:.7 + Math.random() * .7, s:2 + Math.random() * 3.5, c:sim.hit ? pick(['#ffd34d', '#ffffff', '#ff9c2b', '#7dffc1']) : '#d8c3a0'});
+    }
+  }
+  fxLoop();
+}
+let fxOn = false, fxT = 0;
+function fxLoop(){
+  if (fxOn || !S.shown) return;
+  fxOn = true; fxT = performance.now();
+  const tick = now => {
+    const dt = Math.min(.05, (now - fxT) / 1000); fxT = now;
+    for (const q of S.fx){ q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 420 * dt; q.life -= dt; }
+    S.fx = S.fx.filter(q => q.life > 0);
+    if (S.banner && !reduceMotion && now > S.banner.until) S.banner = null;
+    if (S.run){ fxOn = false; return; }
+    paint(S.shown.sim, S.shown.t);
+    if (S.fx.length || (S.banner && !reduceMotion)) requestAnimationFrame(tick); else fxOn = false;
+  };
+  requestAnimationFrame(tick);
+}
+function resize(){
+  const box = $('range'), wide = innerWidth > 900 && !TEST;
+  const aw = box.clientWidth, ah = wide ? box.clientHeight : aw * .62;
+  const nW = Math.floor(aw), nH = Math.floor(wide ? Math.min(ah, aw * .72) : ah), dpr = devicePixelRatio || 1;
+  if (nW === W && nH === H && cv.width === Math.round(W * dpr)) return;   // the page reflowed but the range did not change size
+  const r = nW / W; for (const q of S.strobe){ q[0] *= r; q[1] = nH - (H - q[1]) * r; q[2] *= r; }
+  W = nW; H = nH;
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
+  if (S.shown && !S.run) paint(S.shown.sim, S.shown.t);
+}
+
+/* ---------- game flow ---------- */
+const lv = () => LEVELS[S.cur];
+function loadLevel(i, fresh = true){
+  S.cur = i; if (fresh) S.p = lv().gen();
+  Object.assign(S, {tries:0, helped:false, solved:false, last:null, strobe:[], fx:[], banner:null}); cancelRun();
+  const L = lv(), n = i - LEVELS.findIndex(x => x.ch === L.ch) + 1;
+  $('tag').textContent = `Level ${L.ch + 1}.${n} · ${CHAPTERS[L.ch]}`;
+  $('lvName').textContent = L.name;
+  $('story').innerHTML = L.story(S.p);
+  $('ansLabel').textContent = `${L.sym} (${L.unit})`;
+  $('ans').value = ''; $('ans').setAttribute('aria-label', `${L.word} in ${L.unit}`);
+  $('eqs').innerHTML = L.eqs.map(e => `<li>${e}</li>`).join('');
+  $('errMsg').hidden = true; $('debrief').hidden = true;
+  store.set('proving-ground-cur', i);
+  S.shown = {sim:L.sim(S.p, 0), t:0}; S.lastD = paint(S.shown.sim, 0);
+  cv.setAttribute('aria-label', `Side view of the test range: ${L.name}. ${L.story(S.p).replace(/<[^>]+>/g, '')}`);
+  renderNav();
+}
+function renderNav(){
+  const nav = $('nav'); nav.textContent = '';
+  CHAPTERS.forEach((c, ci) => {
+    const g2 = document.createElement('div'); g2.className = 'group';
+    const lab = document.createElement('span'); lab.textContent = c; g2.append(lab);
+    let n = 0;
+    LEVELS.forEach((L, i) => { if (L.ch !== ci) return; n++;
+      const b = document.createElement('button'), s = best[i];
+      b.type = 'button'; b.className = 'lv' + (i === S.cur ? ' cur' : '') + (s > 0 ? ' done' : s === -1 ? ' helped' : '');
+      b.textContent = `${ci + 1}.${n}`; b.setAttribute('aria-label', `Level ${ci + 1}.${n}, ${L.name}${s > 0 ? `, ${s} of 3 stars` : ''}`);
+      b.onclick = () => { if (!S.run) loadLevel(i); };
+      g2.append(b); });
+    nav.append(g2);
+  });
+  const stars = Object.values(best).reduce((a, x) => a + Math.max(0, x), 0);
+  $('total').textContent = `★ ${stars} of ${LEVELS.length * 3}`;
+}
+let rafId = 0;
+function cancelRun(){ cancelAnimationFrame(rafId); S.run = null; $('btnGo').disabled = false; }
+function launch(){
+  if (S.run || TEST) return;
+  const raw = $('ans').value.trim().replace(',', '.'), v = parseFloat(raw), err = $('errMsg');
+  if (!/^[0-9]*\.?[0-9]+$|^[0-9]+\.$/.test(raw) || !(v > 0)){ err.textContent = `Enter a positive number for ${lv().word}, in ${lv().unit}.`; err.hidden = false; return; }
+  err.hidden = true; $('debrief').hidden = true; S.last = v; S.tries++;
+  const sim = lv().sim(S.p, v); $('btnGo').disabled = true;
+  const T = Math.max(sim.T, .05), t0 = performance.now(), gap = T / 14; let nextGhost = gap;
+  S.run = sim; S.shown = {sim, t:0}; S.strobe = []; S.fx = []; S.banner = null;
+  const step = now => {
+    const t = reduceMotion ? T : Math.min(T, (now - t0) / 1000);
+    S.shown.t = t; S.lastD = paint(sim, t);
+    if (t >= nextGhost && t < T && S.lastD.moving){ S.strobe.push(S.lastD.moving.slice()); nextGhost += gap; }
+    if (t < T) rafId = requestAnimationFrame(step); else finish(sim);
+  };
+  rafId = requestAnimationFrame(step);
+}
+function finish(sim){
+  S.run = null; $('btnGo').disabled = false;
+  const box = $('debrief'), line = $('resultLine'), L = lv();
+  $('facts').innerHTML = sim.facts.map(x => `<li>${x}</li>`).join('');
+  $('idea').textContent = L.idea;
+  if (sim.hit){
+    if (!S.solved){
+      S.solved = true;
+      const stars = S.helped ? 0 : Math.max(1, 4 - S.tries), prev = best[S.cur];
+      if (stars > 0) best[S.cur] = Math.max(prev > 0 ? prev : 0, stars); else if (prev == null) best[S.cur] = -1;
+      store.set('proving-ground-best', best);
+      line.textContent = stars ? `On target on launch ${S.tries}. ${'★'.repeat(stars)}` : 'On target, using the worked solution.';
+    } else line.textContent = 'On target again.';
+    line.className = 'result hit';
+    if (!NOSOL) showSteps();
+    $('btnNext').hidden = LOCK || S.cur >= LEVELS.length - 1;
+  } else {
+    line.textContent = sim.miss; line.className = 'result miss';
+    if (!S.helped) $('stepsBox').hidden = true;
+    $('btnSolve').hidden = S.helped || NOSOL; $('btnNext').hidden = true;
+  }
+  box.hidden = false; renderNav(); celebrate(sim);
+  box.scrollIntoView({block:'nearest', behavior:reduceMotion ? 'auto' : 'smooth'});
+}
+function showSteps(){
+  $('steps').innerHTML = lv().steps(S.p, lv().ans(S.p)).map(s => `<li>${s}</li>`).join('');
+  $('stepsBox').hidden = false; $('btnSolve').hidden = true;
+}
+$('form').addEventListener('submit', e => { e.preventDefault(); $('ans').blur(); launch(); });
+$('btnSolve').onclick = () => { if (NOSOL) return; S.helped = true; showSteps(); };
+$('btnFresh').onclick = () => { if (!LOCK) loadLevel(S.cur); };
+$('btnNext').onclick = () => { if (!LOCK) loadLevel(S.cur + 1); };
+new ResizeObserver(resize).observe($('range'));
+addEventListener('resize', resize);
+
+/* ---------- boot ---------- */
+function start(){
+  resize();
+  if (LINK){ S.p = LINK.p; loadLevel(LINK.i, false); }
+  else { const cur = store.get('proving-ground-cur', 0); loadLevel(LEVELS[cur] ? cur : 0); }
+  if (document.fonts?.ready) document.fonts.ready.then(() => { if (S.shown && !S.run) paint(S.shown.sim, S.shown.t); });
+}
+start();
+})();
+</script>
+</body>
+</html>
