@@ -95,12 +95,21 @@ Simulation: {SITE}
 3. Paste the **Common Control** block into Common Control.
 4. Paste the **Question Text** block into Question Text. Use the editor's source/HTML view, so the
    `<iframe>` tag stays code instead of becoming text.
-5. Save, then **Test** a few versions. Check that the picture shows the same numbers as the text.
+5. Paste the **Detailed Solution** block into the Detailed Solution field, also in source/HTML view.
+   Students only see it once the answer is revealed. It shows the simulation launching the correct
+   answer for their own numbers, and tapping it replays the launch.
+6. Save, then **Test** a few versions. Check that the picture shows the same numbers as the text, and
+   that the solution launch lands on target.
+
+In the assessment settings, choose when students can see the detailed solution (for example, after
+the last try or after the due date). Before then, the question only shows the still picture.
 
 ## Settings you may want to change
 
 - `$reltolerance = 0.02` accepts answers within 2% of the exact value. That's enough room for
   three-significant-figure rounding along the way. Use `0.01` to be stricter.
+- `mode=solution` (used in the Detailed Solution) shows only the picture and launches the correct
+  answer on its own, so put it only where students see it after answering.
 - `mode=test` in the link shows only the picture: no answer box, no Launch button, no feedback.
   To let students launch and watch their own answer before submitting, remove `&mode=test`. To also
   hide the worked solution in that case, add `&solution=0`.
@@ -136,10 +145,20 @@ def block(code, name, keys, sym, unit, word, control, story):
         f"<p>Use g = 9.8 m/s². Enter the {word} in {unit}, to three significant figures.</p>\n"
         f"<p>{sym} = $answerbox {unit}</p>"
     )
+    sol_src = src.replace("mode=test", "mode=solution")
+    sol = (
+        f'<p>Here is the launch with the correct {word}. Tap the picture to replay it.</p>\n'
+        f'<div style="max-width:820px">\n'
+        f'<iframe src="{sol_src}" title="Physics Proving Ground: {name}, correct launch" loading="lazy" '
+        f'style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>\n'
+        f'<p style="font-size:85%"><a href="{sol_src}" target="_blank" rel="noopener">Open the launch in a new tab</a></p>\n'
+        f"</div>"
+    )
     return (f"## Level {code} · {name}\n\n"
             f"Variables passed to the simulation: `{', '.join(keys)}`\n\n"
             f"**Common Control**\n\n```\n{ctl}\n```\n\n"
-            f"**Question Text**\n\n```html\n{text}\n```\n\n---\n")
+            f"**Question Text**\n\n```html\n{text}\n```\n\n"
+            f"**Detailed Solution**\n\n```html\n{sol}\n```\n\n---\n")
 
 
 out = HEAD + "\n".join(block(*lv) for lv in L)

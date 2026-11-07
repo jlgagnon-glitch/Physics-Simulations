@@ -337,10 +337,13 @@ const LINK = (() => {
 })();
 const MODE = (URLQ.get('mode') || '').toLowerCase();
 const TEST = !!LINK && MODE === 'test';             // picture of the setup only; students answer elsewhere
+const SOLN = !!LINK && MODE === 'solution';         // picture only, launching the correct answer on its own; tap to replay
+const BARE = TEST || SOLN;
 const NOSOL = URLQ.get('solution') === '0';         // never show the worked solution
 const LOCK = !!LINK;                                // one level, numbers fixed by the link
 if (LOCK) $('app').classList.add('locked');
-if (TEST){ document.documentElement.classList.add('bare'); $('app').classList.add('bare'); }
+if (BARE){ document.documentElement.classList.add('bare'); $('app').classList.add('bare'); }
+if (SOLN){ $('scene').style.cursor = 'pointer'; $('scene').title = 'Tap to replay'; }
 if (LOCK){ $('btnFresh').hidden = true; $('btnNext').hidden = true; }
 if (NOSOL) $('btnSolve').hidden = true;
 
@@ -642,6 +645,12 @@ function paint(sim, t){
   const s = TEST ? lv().name : rd.join('   '), w = ctx.measureText(s).width;   // in test mode the readout would only show zeros
   ctx.fillStyle = 'rgba(10,14,20,.72)'; ctx.fillRect(8, 8, w + 20, 28);
   ctx.fillStyle = '#7dffc1'; ctx.fillText(s, 18, 27);
+  if (SOLN){   // name the launch value, and how to see it again
+    const L = lv(), tag = `${L.sym} = ${f(L.ans(S.p))} ${L.unit}`;
+    ctx.font = '600 14px "IBM Plex Mono", Menlo, monospace'; const tw = ctx.measureText(tag).width;
+    ctx.fillStyle = 'rgba(10,14,20,.72)'; ctx.fillRect(W - tw - 28, 8, tw + 20, 28); ctx.fillStyle = '#ffb46b'; ctx.fillText(tag, W - tw - 18, 27);
+    if (!S.run && S.tries){ ctx.font = '600 13px "IBM Plex Mono", Menlo, monospace'; const h2 = 'Tap to replay', hw = ctx.measureText(h2).width; ctx.fillStyle = 'rgba(10,14,20,.72)'; ctx.fillRect(W - hw - 28, 42, hw + 20, 24); ctx.fillStyle = '#eaf0f4'; ctx.fillText(h2, W - hw - 18, 59); }
+  }
   for (const f2 of S.fx){ ctx.globalAlpha = clamp(f2.life, 0, 1); ctx.fillStyle = f2.c; ctx.fillRect(f2.x - f2.s / 2, f2.y - f2.s / 2, f2.s, f2.s); }
   ctx.globalAlpha = 1;
   if (S.banner){
@@ -681,7 +690,7 @@ function fxLoop(){
   requestAnimationFrame(tick);
 }
 function resize(){
-  const box = $('range'), wide = innerWidth > 900 && !TEST;
+  const box = $('range'), wide = innerWidth > 900 && !BARE;
   const aw = box.clientWidth, ah = wide ? box.clientHeight : aw * .62;
   const nW = Math.floor(aw), nH = Math.floor(wide ? Math.min(ah, aw * .72) : ah), dpr = devicePixelRatio || 1;
   if (nW === W && nH === H && cv.width === Math.round(W * dpr)) return;   // the page reflowed but the range did not change size
@@ -768,7 +777,7 @@ function finish(sim){
     $('btnSolve').hidden = S.helped || NOSOL; $('btnNext').hidden = true;
   }
   box.hidden = false; renderNav(); celebrate(sim);
-  box.scrollIntoView({block:'nearest', behavior:reduceMotion ? 'auto' : 'smooth'});
+  if (!BARE) box.scrollIntoView({block:'nearest', behavior:reduceMotion ? 'auto' : 'smooth'});
 }
 function showSteps(){
   $('steps').innerHTML = lv().steps(S.p, lv().ans(S.p)).map(s => `<li>${s}</li>`).join('');
@@ -787,6 +796,11 @@ function start(){
   if (LINK){ S.p = LINK.p; loadLevel(LINK.i, false); }
   else { const cur = store.get('proving-ground-cur', 0); loadLevel(LEVELS[cur] ? cur : 0); }
   if (document.fonts?.ready) document.fonts.ready.then(() => { if (S.shown && !S.run) paint(S.shown.sim, S.shown.t); });
+  if (SOLN){
+    const go = () => { if (S.run) return; $('ans').value = lv().ans(S.p).toPrecision(6); launch(); };
+    $('scene').addEventListener('click', go);
+    setTimeout(go, 900);   // a moment to take in the setup first
+  }
 }
 start();
 })();

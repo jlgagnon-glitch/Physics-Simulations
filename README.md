@@ -24,6 +24,7 @@ proving-ground.html?level=1.1&h=1.2&d=2.4&mode=test
 | `level` | Level number as shown on the buttons, `1.1` to `4.4` (or `1` to `16`) |
 | one name per number | The level's numbers, e.g. `h` and `d` for level 1.1 (see the MyOpenMath file for each level's names). Any number left out is chosen at random. |
 | `mode=test` | Show only the picture of the setup: no answer box, Launch button or feedback. Use this inside graded questions. |
+| `mode=solution` | Show only the picture, launch the correct answer on its own, and replay when tapped. For MyOpenMath's Detailed Solution, which students see after answering. |
 | `solution=0` | Never show the worked solution |
 
 When the link sets a level, the level menu, stars and "New numbers" button are hidden, and nothing is

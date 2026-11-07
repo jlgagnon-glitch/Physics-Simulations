@@ -13,12 +13,21 @@ Simulation: https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground
 3. Paste the **Common Control** block into Common Control.
 4. Paste the **Question Text** block into Question Text. Use the editor's source/HTML view, so the
    `<iframe>` tag stays code instead of becoming text.
-5. Save, then **Test** a few versions. Check that the picture shows the same numbers as the text.
+5. Paste the **Detailed Solution** block into the Detailed Solution field, also in source/HTML view.
+   Students only see it once the answer is revealed. It shows the simulation launching the correct
+   answer for their own numbers, and tapping it replays the launch.
+6. Save, then **Test** a few versions. Check that the picture shows the same numbers as the text, and
+   that the solution launch lands on target.
+
+In the assessment settings, choose when students can see the detailed solution (for example, after
+the last try or after the due date). Before then, the question only shows the still picture.
 
 ## Settings you may want to change
 
 - `$reltolerance = 0.02` accepts answers within 2% of the exact value. That's enough room for
   three-significant-figure rounding along the way. Use `0.01` to be stricter.
+- `mode=solution` (used in the Detailed Solution) shows only the picture and launches the correct
+  answer on its own, so put it only where students see it after answering.
 - `mode=test` in the link shows only the picture: no answer box, no Launch button, no feedback.
   To let students launch and watch their own answer before submitting, remove `&mode=test`. To also
   hide the worked solution in that case, add `&solution=0`.
@@ -62,6 +71,16 @@ $reltolerance = 0.02
 <p>v = $answerbox m/s</p>
 ```
 
+**Detailed Solution**
+
+```html
+<p>Here is the launch with the correct launch speed. Tap the picture to replay it.</p>
+<div style="max-width:820px">
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=1.1&h=$h&d=$d&mode=solution" title="Physics Proving Ground: Off the bench, correct launch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"><a href="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=1.1&h=$h&d=$d&mode=solution" target="_blank" rel="noopener">Open the launch in a new tab</a></p>
+</div>
+```
+
 ---
 
 ## Level 1.2 · Stop on the line
@@ -87,6 +106,16 @@ $reltolerance = 0.02
 <p>A test cart reaches the brake zone at $v m/s. It has to stop $d m later, right on the line. How hard must it brake?</p>
 <p>Use g = 9.8 m/s². Enter the braking rate (magnitude) in m/s², to three significant figures.</p>
 <p>a = $answerbox m/s²</p>
+```
+
+**Detailed Solution**
+
+```html
+<p>Here is the launch with the correct braking rate (magnitude). Tap the picture to replay it.</p>
+<div style="max-width:820px">
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=1.2&v=$v&d=$d&mode=solution" title="Physics Proving Ground: Stop on the line, correct launch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"><a href="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=1.2&v=$v&d=$d&mode=solution" target="_blank" rel="noopener">Open the launch in a new tab</a></p>
+</div>
 ```
 
 ---
@@ -115,6 +144,16 @@ $reltolerance = 0.02
 <p>A launcher is locked at $th° above level ground. The target is $R m away at launcher height. What launch speed reaches it?</p>
 <p>Use g = 9.8 m/s². Enter the launch speed in m/s, to three significant figures.</p>
 <p>v = $answerbox m/s</p>
+```
+
+**Detailed Solution**
+
+```html
+<p>Here is the launch with the correct launch speed. Tap the picture to replay it.</p>
+<div style="max-width:820px">
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=1.3&th=$th&R=$R&mode=solution" title="Physics Proving Ground: Fixed angle, correct launch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"><a href="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=1.3&th=$th&R=$R&mode=solution" target="_blank" rel="noopener">Open the launch in a new tab</a></p>
+</div>
 ```
 
 ---
@@ -147,6 +186,16 @@ $reltolerance = 0.02
 <p>t = $answerbox s</p>
 ```
 
+**Detailed Solution**
+
+```html
+<p>Here is the launch with the correct release delay. Tap the picture to replay it.</p>
+<div style="max-width:820px">
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=1.4&u=$u&x0=$x0&v=$v&h=$h&mode=solution" title="Physics Proving Ground: Lead the cart, correct launch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"><a href="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=1.4&u=$u&x0=$x0&v=$v&h=$h&mode=solution" target="_blank" rel="noopener">Open the launch in a new tab</a></p>
+</div>
+```
+
 ---
 
 ## Level 2.1 · Skid to the mark
@@ -172,6 +221,16 @@ $reltolerance = 0.02
 <p>A sled slides across a floor with friction coefficient μ = $mu. It has to stop $d m from the start. What speed should it begin with?</p>
 <p>Use g = 9.8 m/s². Enter the starting speed in m/s, to three significant figures.</p>
 <p>v = $answerbox m/s</p>
+```
+
+**Detailed Solution**
+
+```html
+<p>Here is the launch with the correct starting speed. Tap the picture to replay it.</p>
+<div style="max-width:820px">
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=2.1&mu=$mu&d=$d&mode=solution" title="Physics Proving Ground: Skid to the mark, correct launch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"><a href="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=2.1&mu=$mu&d=$d&mode=solution" target="_blank" rel="noopener">Open the launch in a new tab</a></p>
+</div>
 ```
 
 ---
@@ -204,6 +263,16 @@ $reltolerance = 0.02
 <p>F = $answerbox N</p>
 ```
 
+**Detailed Solution**
+
+```html
+<p>Here is the launch with the correct rope force. Tap the picture to replay it.</p>
+<div style="max-width:820px">
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=2.2&m=$m&th=$th&mu=$mu&v0=$v0&mode=solution" title="Physics Proving Ground: Steady up the ramp, correct launch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"><a href="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=2.2&m=$m&th=$th&mu=$mu&v0=$v0&mode=solution" target="_blank" rel="noopener">Open the launch in a new tab</a></p>
+</div>
+```
+
 ---
 
 ## Level 2.3 · Hanging counterweight
@@ -231,6 +300,16 @@ $reltolerance = 0.02
 <p>A $m kg cart on a frictionless track is tied over a pulley to a hanging mass. Released from rest, the cart must travel $d m in exactly $t s. What hanging mass does that take?</p>
 <p>Use g = 9.8 m/s². Enter the hanging mass in kg, to three significant figures.</p>
 <p>M = $answerbox kg</p>
+```
+
+**Detailed Solution**
+
+```html
+<p>Here is the launch with the correct hanging mass. Tap the picture to replay it.</p>
+<div style="max-width:820px">
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=2.3&m=$m&d=$d&t=$t&mode=solution" title="Physics Proving Ground: Hanging counterweight, correct launch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"><a href="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=2.3&m=$m&d=$d&t=$t&mode=solution" target="_blank" rel="noopener">Open the launch in a new tab</a></p>
+</div>
 ```
 
 ---
@@ -262,6 +341,16 @@ $reltolerance = 0.02
 <p>v = $answerbox m/s</p>
 ```
 
+**Detailed Solution**
+
+```html
+<p>Here is the launch with the correct starting speed. Tap the picture to replay it.</p>
+<div style="max-width:820px">
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=2.4&th=$th&mu=$mu&L=$L&mode=solution" title="Physics Proving Ground: Up to the latch, correct launch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"><a href="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=2.4&th=$th&mu=$mu&L=$L&mode=solution" target="_blank" rel="noopener">Open the launch in a new tab</a></p>
+</div>
+```
+
 ---
 
 ## Level 3.1 · Spring to the summit
@@ -288,6 +377,16 @@ $reltolerance = 0.02
 <p>A $m kg cart sits against a spring with k = $k N/m. The track is frictionless and climbs to a stop at $h m height. How far should you compress the spring so the cart just reaches that height?</p>
 <p>Use g = 9.8 m/s². Enter the spring compression in m, to three significant figures.</p>
 <p>x = $answerbox m</p>
+```
+
+**Detailed Solution**
+
+```html
+<p>Here is the launch with the correct spring compression. Tap the picture to replay it.</p>
+<div style="max-width:820px">
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=3.1&m=$m&k=$k&h=$h&mode=solution" title="Physics Proving Ground: Spring to the summit, correct launch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"><a href="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=3.1&m=$m&k=$k&h=$h&mode=solution" target="_blank" rel="noopener">Open the launch in a new tab</a></p>
+</div>
 ```
 
 ---
@@ -319,6 +418,16 @@ $reltolerance = 0.02
 <p>x = $answerbox m</p>
 ```
 
+**Detailed Solution**
+
+```html
+<p>Here is the launch with the correct spring compression. Tap the picture to replay it.</p>
+<div style="max-width:820px">
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=3.2&m=$m&k=$k&mu=$mu&d=$d&mode=solution" title="Physics Proving Ground: Spring meets carpet, correct launch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"><a href="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=3.2&m=$m&k=$k&mu=$mu&d=$d&mode=solution" target="_blank" rel="noopener">Open the launch in a new tab</a></p>
+</div>
+```
+
 ---
 
 ## Level 3.3 · Stick and climb
@@ -345,6 +454,16 @@ $reltolerance = 0.02
 <p>Cart A ($m1 kg) hits parked cart B ($m2 kg) and they lock together. The pair then coasts up a frictionless hill. They must reach exactly $h m height. How fast must cart A go before the crash?</p>
 <p>Use g = 9.8 m/s². Enter the speed of cart A in m/s, to three significant figures.</p>
 <p>v = $answerbox m/s</p>
+```
+
+**Detailed Solution**
+
+```html
+<p>Here is the launch with the correct speed of cart A. Tap the picture to replay it.</p>
+<div style="max-width:820px">
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=3.3&m1=$m1&m2=$m2&h=$h&mode=solution" title="Physics Proving Ground: Stick and climb, correct launch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"><a href="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=3.3&m1=$m1&m2=$m2&h=$h&mode=solution" target="_blank" rel="noopener">Open the launch in a new tab</a></p>
+</div>
 ```
 
 ---
@@ -376,6 +495,16 @@ $reltolerance = 0.02
 <p>v = $answerbox m/s</p>
 ```
 
+**Detailed Solution**
+
+```html
+<p>Here is the launch with the correct speed of ball A. Tap the picture to replay it.</p>
+<div style="max-width:820px">
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=3.4&m1=$m1&m2=$m2&H=$H&d=$d&mode=solution" title="Physics Proving Ground: Knock it off the edge, correct launch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"><a href="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=3.4&m1=$m1&m2=$m2&H=$H&d=$d&mode=solution" target="_blank" rel="noopener">Open the launch in a new tab</a></p>
+</div>
+```
+
 ---
 
 ## Level 4.1 · Level the seesaw
@@ -402,6 +531,16 @@ $reltolerance = 0.02
 <p>A $m1 kg load sits $d1 m left of a seesaw's pivot. Where, measured from the pivot, must a $m2 kg load go on the right side so the beam balances?</p>
 <p>Use g = 9.8 m/s². Enter the distance from the pivot in m, to three significant figures.</p>
 <p>x = $answerbox m</p>
+```
+
+**Detailed Solution**
+
+```html
+<p>Here is the launch with the correct distance from the pivot. Tap the picture to replay it.</p>
+<div style="max-width:820px">
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=4.1&m1=$m1&d1=$d1&m2=$m2&mode=solution" title="Physics Proving Ground: Level the seesaw, correct launch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"><a href="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=4.1&m1=$m1&d1=$d1&m2=$m2&mode=solution" target="_blank" rel="noopener">Open the launch in a new tab</a></p>
+</div>
 ```
 
 ---
@@ -434,6 +573,16 @@ $reltolerance = 0.02
 <p>x = $answerbox m</p>
 ```
 
+**Detailed Solution**
+
+```html
+<p>Here is the launch with the correct distance from the pivot. Tap the picture to replay it.</p>
+<div style="max-width:820px">
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=4.2&L=$L&M=$M&p=$p&m=$m&mode=solution" title="Physics Proving Ground: The heavy beam, correct launch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"><a href="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=4.2&L=$L&M=$M&p=$p&m=$m&mode=solution" target="_blank" rel="noopener">Open the launch in a new tab</a></p>
+</div>
+```
+
 ---
 
 ## Level 4.3 · Flywheel launcher
@@ -464,6 +613,16 @@ $reltolerance = 0.02
 <p>τ = $answerbox N·m</p>
 ```
 
+**Detailed Solution**
+
+```html
+<p>Here is the launch with the correct torque. Tap the picture to replay it.</p>
+<div style="max-width:820px">
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=4.3&I=$I&r=$r&t=$t&H=$H&d=$d&mode=solution" title="Physics Proving Ground: Flywheel launcher, correct launch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"><a href="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=4.3&I=$I&r=$r&t=$t&H=$H&d=$d&mode=solution" target="_blank" rel="noopener">Open the launch in a new tab</a></p>
+</div>
+```
+
 ---
 
 ## Level 4.4 · Rolling start
@@ -490,6 +649,16 @@ $reltolerance = 0.02
 <p>A solid cylinder rolls without slipping down a ramp, then off a table $H m high. It must land $d m from the edge. From what height on the ramp, above the tabletop, should you release it? For a solid cylinder, I = ½mr².</p>
 <p>Use g = 9.8 m/s². Enter the ramp height in m, to three significant figures.</p>
 <p>h = $answerbox m</p>
+```
+
+**Detailed Solution**
+
+```html
+<p>Here is the launch with the correct ramp height. Tap the picture to replay it.</p>
+<div style="max-width:820px">
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=4.4&H=$H&d=$d&mode=solution" title="Physics Proving Ground: Rolling start, correct launch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"><a href="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=4.4&H=$H&d=$d&mode=solution" target="_blank" rel="noopener">Open the launch in a new tab</a></p>
+</div>
 ```
 
 ---
