@@ -30,7 +30,19 @@ proving-ground.html?level=1.1&h=1.2&d=2.4&mode=test
 When the link sets a level, the level menu, stars and "New numbers" button are hidden, and nothing is
 saved in the browser. With no settings, the full game opens as usual.
 
-### MyOpenMath
+## Vector Range
+
+`vectors.html` has 20 vector problems in four chapters: Components, Adding two, Adding many and
+Subtracting. They're based on the PHYS 205 Lecture 3 (graphical method) and Lecture 4 (analytical method)
+examples. The given vectors slide tip-to-tail to mark a target, and the student's answer is drawn
+from the origin: as one arrow for magnitude and direction, or as x then y for components.
+
+Links work the same way as the Proving Ground, with `q=1.1` to `q=4.5` choosing the problem. Its
+answers have two values, so `launch` takes both, separated by a comma: `launch=13.2,40.9`.
+`vectors-myopenmath.md` has two-part (Multipart) MyOpenMath code for all 20 problems, and
+`build_vectors_myopenmath.py` regenerates it.
+
+### MyOpenMath (Proving Ground)
 
 `proving-ground-myopenmath.md` has ready-to-paste Common Control and Question Text for all
 16 levels. MyOpenMath picks the numbers and grades the answer, and it shows the simulation for

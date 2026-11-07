@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Vector Range</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=IBM+Plex+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Same look as the Physics Proving Ground: the drawing on the left, the problem and answer on the right. */
+:root{
+  --paper:#18212b; --sheet:#222e3b; --rule:#3d4d5e;
+  --ink:#eaf0f4; --muted:#a9b6c2; --steel-lt:#6d7d8c;
+  --safety:#ff8a2a; --hit:#7dffc1; --miss:#ff8b7a; --field:#0f161e; --on-safety:#20140a;
+  --f-display:"Saira Stencil One", Impact, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--f-body); font-size:16px; line-height:1.45}
+button,input{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--safety); outline-offset:2px}
+.app{height:100%; display:grid; grid-template-rows:auto minmax(0,1fr); grid-template-columns:minmax(0,1fr) 380px; gap:10px 16px;
+  padding-block:10px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px))}
+header{grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:6px 18px}
+h1{margin:0; font-family:var(--f-display); font-weight:400; font-size:30px; line-height:1; letter-spacing:.02em}
+.nav{display:flex; flex-wrap:wrap; gap:6px 14px; flex:1; min-width:0}
+.group{display:flex; align-items:center; gap:3px; flex-wrap:wrap}
+.group > span{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-right:3px}
+.lv{min-width:34px; height:34px; border:1px solid var(--rule); background:var(--sheet); border-radius:3px; cursor:pointer; font-family:var(--f-mono); font-size:14px; font-weight:600; padding:0}
+.lv.cur{background:var(--ink); color:var(--sheet); border-color:var(--ink)}
+.lv.done{border-color:var(--hit); box-shadow:inset 0 -3px 0 var(--hit)}
+.lv.cur.done{box-shadow:inset 0 -3px 0 #0f7a4d}
+.total{font-family:var(--f-mono); font-size:14px; font-weight:600; white-space:nowrap}
+.range{min-width:0; min-height:0; display:flex; align-items:flex-start; justify-content:center}
+#scene{display:block; border:1px solid var(--rule); border-radius:4px; background:var(--field); max-width:100%}
+.test{min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-bottom:6px}
+.sheet{background:var(--sheet); border:1px solid var(--rule); padding:12px 14px; display:flex; flex-direction:column; gap:8px}
+.tag{font-family:var(--f-mono); font-size:13px; font-weight:600; color:var(--safety)}
+h2{margin:0; font-size:20px; line-height:1.2}
+.story{margin:0}
+.story b{font-family:var(--f-mono); font-weight:600}
+.entry{display:grid; grid-template-columns:auto 1fr; align-items:center; gap:8px 10px}
+.entry label{font-family:var(--f-mono); font-weight:600; text-align:right}
+.entry input{width:8em; font-family:var(--f-mono); font-weight:600; font-size:18px; padding:6px 8px; background:var(--field); border:2px solid var(--safety); border-radius:2px; color:var(--ink)}
+.entry .u{font-family:var(--f-mono); color:var(--muted); margin-left:6px}
+.btn{border:1px solid var(--ink); background:transparent; padding:9px 13px; font-weight:700; cursor:pointer; border-radius:2px}
+.btn.go{background:var(--safety); border-color:var(--safety); color:var(--on-safety)}
+.btn:disabled{opacity:.45; cursor:default}
+.row{display:flex; flex-wrap:wrap; gap:8px}
+.err{margin:0; color:var(--miss); font-weight:700; font-size:15px}
+.note{margin:0; font-size:14.5px; color:var(--muted)}
+.label{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted)}
+.result{font-weight:700; font-size:17px; margin:0}
+.result.hit{color:var(--hit)} .result.miss{color:var(--miss)}
+.facts{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:3px; font-size:15px}
+.steps{margin:0; padding-left:20px; display:flex; flex-direction:column; gap:4px; font-size:15px}
+.steps .m{font-family:var(--f-mono); font-size:14.5px}
+.app.locked .nav, .app.locked .total{display:none}
+.app.locked h1{font-size:22px}
+html.bare, html.bare body{height:auto}
+.app.bare{height:auto; grid-template-columns:minmax(0,1fr); grid-template-rows:auto}
+.app.bare header, .app.bare .test{display:none}
+.app.bare .range{display:block}
+@media (max-width:900px){
+  html,body{height:auto}
+  .app{grid-template-columns:minmax(0,1fr); grid-template-rows:none; height:auto}
+  .test{overflow:visible}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <h1>Vector Range</h1>
+    <nav class="nav" id="nav" aria-label="Problems"></nav>
+    <div class="total" id="total"></div>
+  </header>
+  <section class="range" id="range"><canvas id="scene" role="img" aria-label="Vector diagram on a grid"></canvas></section>
+  <aside class="test">
+    <section class="sheet">
+      <div class="tag" id="tag"></div>
+      <h2 id="qName"></h2>
+      <p class="story" id="story"></p>
+      <p class="note" id="dirNote"></p>
+      <form class="entry" id="form" autocomplete="off"></form>
+      <div class="row"><button class="btn go" id="btnGo" type="submit" form="form">Fire</button></div>
+      <p class="err" id="errMsg" hidden></p>
+      <p class="note">Work out your answer, then fire. The given vectors slide tip-to-tail to mark the target, and your vector is drawn from the origin.</p>
+    </section>
+    <section class="sheet" id="debrief" hidden>
+      <p class="result" id="resultLine"></p>
+      <ul class="facts" id="facts"></ul>
+      <div id="stepsBox" hidden><div class="label">Worked solution</div><ol class="steps" id="steps"></ol></div>
+      <div class="row">
+        <button class="btn" id="btnSolve" type="button">Show worked solution</button>
+        <button class="btn" id="btnFresh" type="button">New numbers</button>
+        <button class="btn go" id="btnNext" type="button" hidden>Next problem</button>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const D2R = Math.PI / 180;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const rnd = (a, b, s) => { const n = Math.floor((b - a) / s + 1e-9); return +(a + s * Math.floor(Math.random() * (n + 1))).toFixed(6); };
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const until = (make, ok) => { for (let k = 0; k < 20000; k++){ const v = make(); if (ok(v)) return v; } throw new Error('no valid numbers'); };
+const pol = (m, d) => [m * Math.cos(d * D2R), m * Math.sin(d * D2R)];
+const len = v => Math.hypot(v[0], v[1]);
+const ang = v => { let t = Math.atan2(v[1], v[0]) / D2R; if (t < 0) t += 360; if (t >= 360) t -= 360; return t; };
+const sum = vs => vs.reduce((a, v) => [a[0] + v[0], a[1] + v[1]], [0, 0]);
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const minus = s => String(s).replace(/^-/, '−');
+const f = x => { if (!isFinite(x)) return '∞'; if (Math.abs(x) < 5e-10) return '0'; const a = Math.abs(x); return minus(a >= 100 ? x.toFixed(0) : a >= 10 ? x.toFixed(1) : a >= 1 ? x.toFixed(2) : x.toFixed(3)); };
+const fd = d => `${d.toFixed(1)}°`;
+const comp = (x, y) => `(${minus(x)} î ${y < 0 ? '−' : '+'} ${Math.abs(y)} ĵ)`;
+const DIR = 'Give the direction in degrees, measured counterclockwise from the +x axis (east), between 0° and 360°.';
+const C = ['#6cc4ff', '#c79bff', '#ffd25e', '#62e0b5'];   // given vectors; student = orange; answer = mint
+
+// a vector item: {label, m, d} or {label, v:[x, y]}; neg = drawn reversed when placed tip-to-tail
+const vecOf = it => { const v = it.v ? it.v.slice() : pol(it.m, it.d); return it.neg ? [-v[0], -v[1]] : v; };
+const rawOf = it => it.v ? it.v.slice() : pol(it.m, it.d);
+const quad = (x, y, phi) => x >= 0 && y >= 0 ? [`first quadrant, so θ = φ = ${fd(phi)}`, phi] : x < 0 && y >= 0 ? [`second quadrant, so θ = 180° − ${fd(phi)} = ${fd(180 - phi)}`, 180 - phi] : x < 0 ? [`third quadrant, so θ = 180° + ${fd(phi)} = ${fd(180 + phi)}`, 180 + phi] : [`fourth quadrant, so θ = 360° − ${fd(phi)} = ${fd(360 - phi)}`, 360 - phi];
+function polarSteps(items, R, unit, name){
+  const out = items.map(it => {
+    const [x, y] = vecOf(it), lab = it.html || it.label;
+    if (it.v) return `${it.neg ? '−' : ''}${lab}: <span class="m">x = ${f(x)} ${unit}, y = ${f(y)} ${unit}</span>${it.neg ? ' (signs flipped)' : ''}`;
+    if (it.neg) return `−${lab}: flip the signs of ${lab}'s components: <span class="m">x = −(${it.m} cos ${it.d}°) = ${f(x)}, y = −(${it.m} sin ${it.d}°) = ${f(y)}</span>`;
+    return `${lab}: <span class="m">x = ${it.m} cos ${it.d}° = ${f(x)}, y = ${it.m} sin ${it.d}° = ${f(y)}</span>`;
+  });
+  if (items.length > 1) out.push(`Add the components: <span class="m">${name}<sub>x</sub> = ${f(R[0])} ${unit}, ${name}<sub>y</sub> = ${f(R[1])} ${unit}</span>`);
+  out.push(`Magnitude: <span class="m">${name} = √(${f(R[0])}² + ${f(R[1])}²) = ${f(len(R))} ${unit}</span>`);
+  if (Math.abs(R[0]) < 1e-9) out.push(`Direction: the vector points straight ${R[1] > 0 ? 'up, θ = 90°' : 'down, θ = 270°'}`);
+  else { const phi = Math.atan(Math.abs(R[1] / R[0])) / D2R, [txt] = quad(R[0], R[1], phi); out.push(`Reference angle: <span class="m">φ = tan⁻¹(${f(Math.abs(R[1]))}/${f(Math.abs(R[0]))}) = ${fd(phi)}</span>. The vector is in the ${txt}`); }
+  return out;
+}
+const P2 = {rel:.02}, A1 = {abs:1, angle:true};
+const polarParts = (name, unit) => [{sym:name, unit, tol:P2, kind:'mag'}, {sym:'θ', unit:'°', tol:A1, kind:'dir'}];
+
+/* ---------- the 20 problems. gen() must draw the same numbers MyOpenMath does. ---------- */
+const CHAPTERS = ['Components', 'Adding two', 'Adding many', 'Subtracting'];
+const QS = [
+{ch:0, name:'Solve the triangle', kind:'xy', unit:'m',
+  gen:() => ({c:rnd(3, 9, .5), th:ri(15, 75)}),
+  story:p => `A <b>${p.c} m</b> ladder leans against a wall, making a <b>${p.th}°</b> angle with the level ground. How far from the wall is its foot (<i>a</i>), and how high up the wall does it reach (<i>b</i>)?`,
+  parts:() => [{sym:'a', unit:'m', tol:P2, kind:'x'}, {sym:'b', unit:'m', tol:P2, kind:'y'}],
+  given:p => [{label:'ladder', m:p.c, d:p.th}], chain:() => [],
+  target:p => pol(p.c, p.th),
+  steps:p => [`Adjacent side (CAH): <span class="m">a = c cos θ = ${p.c} cos ${p.th}° = ${f(p.c * Math.cos(p.th * D2R))} m</span>`, `Opposite side (SOH): <span class="m">b = c sin θ = ${p.c} sin ${p.th}° = ${f(p.c * Math.sin(p.th * D2R))} m</span>`, `Check with Pythagoras: <span class="m">a² + b² = ${f(p.c * p.c)} = c²</span>`]},
+{ch:0, name:'The ramp', kind:'polar', unit:'m', noDir:true,
+  gen:() => ({a:rnd(2, 8, .5), b:rnd(1, 4, .5)}),
+  story:p => `A ramp rises <b>${p.b} m</b> over a horizontal run of <b>${p.a} m</b>. How long is the ramp's surface (<i>r</i>), and what angle <i>θ</i> does it make with the ground?`,
+  parts:() => [{sym:'r', unit:'m', tol:P2, kind:'mag'}, {sym:'θ', unit:'°', tol:P2, kind:'dir'}],
+  given:p => [{label:'run', m:p.a, d:0, html:'run'}, {label:'rise', m:p.b, d:90, html:'rise'}], pre:true,
+  steps:p => [`Pythagorean theorem: <span class="m">r = √(${p.a}² + ${p.b}²) = ${f(Math.hypot(p.a, p.b))} m</span>`, `TOA: <span class="m">θ = tan⁻¹(${p.b}/${p.a}) = ${fd(Math.atan(p.b / p.a) / D2R)}</span>`]},
+{ch:0, name:'Components of a force', kind:'xy', unit:'N',
+  gen:() => ({F:rnd(50, 500, 10), th:until(() => ri(10, 350), t => (t > 8 && t < 82) || (t > 98 && t < 172) || (t > 188 && t < 262) || (t > 278 && t < 352))}),
+  story:p => `A rope pulls a sled with a force of <b>${p.F} N at ${p.th}°</b>, measured counterclockwise from the +x axis. Find the x and y components of the force.`,
+  parts:p => [{sym:'F<sub>x</sub>', unit:'N', tol:{abs:.015 * p.F}, kind:'x'}, {sym:'F<sub>y</sub>', unit:'N', tol:{abs:.015 * p.F}, kind:'y'}],
+  given:p => [{label:'F', m:p.F, d:p.th}], chain:() => [], target:p => pol(p.F, p.th),
+  steps:p => [`Use the actual angle, which gives the signs automatically: <span class="m">F<sub>x</sub> = ${p.F} cos ${p.th}° = ${f(p.F * Math.cos(p.th * D2R))} N</span>`, `<span class="m">F<sub>y</sub> = ${p.F} sin ${p.th}° = ${f(p.F * Math.sin(p.th * D2R))} N</span>`]},
+{ch:0, name:'Unit vector', kind:'xy', unit:'',
+  gen:() => ({Cx:until(() => ri(-9, 9), x => Math.abs(x) >= 2), Cy:until(() => ri(-9, 9), x => Math.abs(x) >= 2)}),
+  story:p => `Vector <b>C = ${comp(p.Cx, p.Cy)} m</b>. Find the x and y components of the unit vector <b>Ĉ</b>, which points the same way as C but has length 1.`,
+  parts:() => [{sym:'Ĉ<sub>x</sub>', unit:'', tol:{abs:.015}, kind:'x'}, {sym:'Ĉ<sub>y</sub>', unit:'', tol:{abs:.015}, kind:'y'}],
+  given:p => [{label:'C', v:[p.Cx, p.Cy]}], chain:() => [], target:p => { const m = Math.hypot(p.Cx, p.Cy); return [p.Cx / m, p.Cy / m]; },
+  steps:p => { const m = Math.hypot(p.Cx, p.Cy); return [`Length of C: <span class="m">|C| = √(${p.Cx}² + ${p.Cy}²) = ${f(m)} m</span>`, `Divide each component by |C|: <span class="m">Ĉ = C/|C| = ${f(p.Cx / m)} î ${p.Cy < 0 ? '−' : '+'} ${f(Math.abs(p.Cy / m))} ĵ</span>`]; }},
+{ch:0, name:'Scaling a vector', kind:'polar', unit:'m',
+  gen:() => ({k:pick([-3, -2, -1.5, -0.5, 0.5, 1.5, 2, 2.5, 3]), B:ri(2, 10), th:until(() => ri(10, 350), t => Math.abs(t - 180) > 3)}),
+  story:p => `Displacement <b>B</b> is <b>${p.B} m at ${p.th}°</b>. Find the magnitude and direction of <b>${minus(p.k)}B</b>.`,
+  parts:() => polarParts('|kB|', 'm'),
+  given:p => [{label:'B', m:p.B, d:p.th}], chain:() => [], target:p => { const v = pol(p.B, p.th); return [p.k * v[0], p.k * v[1]]; },
+  steps:p => [`Magnitude: <span class="m">|${minus(p.k)}| × ${p.B} = ${f(Math.abs(p.k) * p.B)} m</span>`, p.k > 0 ? `A positive multiplier keeps the direction: <span class="m">θ = ${p.th}°</span>` : `A negative multiplier reverses the direction: <span class="m">θ = ${p.th}° ${p.th < 180 ? '+' : '−'} 180° = ${p.th < 180 ? p.th + 180 : p.th - 180}°</span>`]},
+{ch:0, name:'Components to polar', kind:'polar', unit:'m',
+  gen:() => ({Ax:until(() => ri(-12, 12), x => Math.abs(x) >= 2), Ay:until(() => ri(-12, 12), x => Math.abs(x) >= 2)}),
+  story:p => `A drone's displacement is <b>A = ${comp(p.Ax, p.Ay)} m</b>. Find the magnitude and direction of A.`,
+  parts:() => polarParts('A', 'm'),
+  given:p => [{label:'Aₓ î', v:[p.Ax, 0], html:'A<sub>x</sub> î'}, {label:'A_y ĵ', v:[0, p.Ay], html:'A<sub>y</sub> ĵ'}], pre:true,
+  steps:p => polarSteps([], [p.Ax, p.Ay], 'm', 'A')},
+
+{ch:1, name:'Two ropes on a box', kind:'polar', unit:'N',
+  gen:() => { const a1 = ri(10, 60); return {F1:ri(5, 30), a1, F2:ri(5, 30), a2:a1 + ri(60, 120)}; },
+  story:p => `Two ropes pull on a box: <b>F₁ = ${p.F1} N at ${p.a1}°</b> and <b>F₂ = ${p.F2} N at ${p.a2}°</b>. Find the magnitude and direction of the net force.`,
+  parts:() => polarParts('F<sub>net</sub>', 'N'), R:'F<sub>net</sub>',
+  given:p => [{label:'F₁', html:'F₁', m:p.F1, d:p.a1}, {label:'F₂', html:'F₂', m:p.F2, d:p.a2}]},
+{ch:1, name:'Running on the train', kind:'polar', unit:'m/s',
+  gen:() => ({vt:ri(5, 30), vp:rnd(2, 8, .5), dp:pick([90, 270])}),
+  story:p => `A train moves <b>west at ${p.vt} m/s</b>. A passenger runs <b>${p.dp === 90 ? 'north' : 'south'} at ${p.vp} m/s</b> relative to the train. Find the passenger's velocity relative to the ground.`,
+  parts:() => polarParts('v<sub>pg</sub>', 'm/s'), R:'v<sub>pg</sub>',
+  given:p => [{label:'v train', html:'v<sub>tg</sub>', m:p.vt, d:180}, {label:'v run', html:'v<sub>pt</sub>', m:p.vp, d:p.dp}]},
+{ch:1, name:'Crossing the river', kind:'polar', unit:'m/s',
+  gen:() => ({vb:rnd(2, 6, .5), vc:rnd(.5, 3, .5), dc:pick([0, 180])}),
+  story:p => `A kayak paddles <b>due north at ${p.vb} m/s</b> relative to the water. The river flows <b>${p.dc === 0 ? 'east' : 'west'} at ${p.vc} m/s</b>. Find the kayak's velocity relative to the shore.`,
+  parts:() => polarParts('v', 'm/s'), R:'v',
+  given:p => [{label:'v kayak', html:'v<sub>kayak</sub>', m:p.vb, d:90}, {label:'v river', html:'v<sub>river</sub>', m:p.vc, d:p.dc}]},
+{ch:1, name:'Two-leg hike', kind:'polar', unit:'m',
+  gen:() => ({d1:ri(200, 900), t1:ri(10, 80), d2:ri(200, 900), t2:ri(10, 80)}),
+  story:p => `A hiker walks <b>${p.d1} m at ${p.t1}° N of E</b>, then <b>${p.d2} m at ${p.t2}° N of W</b>. Find the hiker's total displacement.`,
+  parts:() => polarParts('d', 'm'), R:'d',
+  given:p => [{label:'d₁', html:'d₁', m:p.d1, d:p.t1}, {label:'d₂', html:'d₂', m:p.d2, d:180 - p.t2}]},
+{ch:1, name:'Plane in a crosswind', kind:'polar', unit:'km/h',
+  gen:() => { const vp = ri(300, 600), a = ri(20, 160), w = ri(30, 120); return {vp, a, w, aw:until(() => ri(0, 359), aw => vp * Math.sin(a * D2R) + w * Math.sin(aw * D2R) > .05 * (vp + w))}; },
+  story:p => `An airplane flies at <b>${p.vp} km/h at ${p.a}°</b> relative to the air. The wind blows at <b>${p.w} km/h toward ${p.aw}°</b>. Find the plane's velocity relative to the ground.`,
+  parts:() => polarParts('v<sub>ground</sub>', 'km/h'), R:'v',
+  given:p => [{label:'v air', html:'v<sub>air</sub>', m:p.vp, d:p.a}, {label:'wind', html:'v<sub>wind</sub>', m:p.w, d:p.aw}]},
+
+{ch:2, name:'Three forces: components', kind:'xy', unit:'N',
+  gen:() => ({F1:rnd(50, 150, 10), a1:ri(20, 70), F2:rnd(150, 250, 10), a2:ri(110, 160), F3:rnd(20, 60, 10)}),
+  story:p => `Three forces act on a crate: <b>F₁ = ${p.F1} N at ${p.a1}°</b>, <b>F₂ = ${p.F2} N at ${p.a2}°</b>, and <b>F₃ = ${p.F3} N at 270°</b>. Find the x and y components of the net force.`,
+  parts:p => { const t = .005 * (p.F1 + p.F2 + p.F3); return [{sym:'F<sub>net,x</sub>', unit:'N', tol:{abs:t}, kind:'x'}, {sym:'F<sub>net,y</sub>', unit:'N', tol:{abs:t}, kind:'y'}]; },
+  given:p => [{label:'F₁', html:'F₁', m:p.F1, d:p.a1}, {label:'F₂', html:'F₂', m:p.F2, d:p.a2}, {label:'F₃', html:'F₃', m:p.F3, d:270}],
+  steps:p => { const it = QS[11].given(p), R = sum(it.map(vecOf)); return polarSteps(it, R, 'N', 'F<sub>net</sub>').slice(0, 4); }},
+{ch:2, name:'Three forces: net force', kind:'polar', unit:'N',
+  gen:() => ({F1:rnd(50, 150, 10), a1:ri(20, 70), F2:rnd(150, 250, 10), a2:ri(110, 160), F3:rnd(20, 60, 10)}),
+  story:p => `Three forces act on a crate: <b>F₁ = ${p.F1} N at ${p.a1}°</b>, <b>F₂ = ${p.F2} N at ${p.a2}°</b>, and <b>F₃ = ${p.F3} N at 270°</b>. Find the magnitude and direction of the net force.`,
+  parts:() => polarParts('F<sub>net</sub>', 'N'), R:'F<sub>net</sub>',
+  given:p => [{label:'F₁', html:'F₁', m:p.F1, d:p.a1}, {label:'F₂', html:'F₂', m:p.F2, d:p.a2}, {label:'F₃', html:'F₃', m:p.F3, d:270}]},
+{ch:2, name:'Four ropes on a ring', kind:'polar', unit:'N',
+  gen:() => {
+    const p = {F1:rnd(300, 800, 50), t1:ri(20, 70), F2:rnd(300, 800, 50), t2:ri(20, 70), F3:rnd(300, 800, 50), t3:ri(20, 70), t4:ri(20, 70)};
+    const S = sum([pol(p.F1, p.t1), pol(p.F2, 180 - p.t2), pol(p.F3, 180 + p.t3)]);
+    p.F4 = until(() => rnd(300, 800, 50), F4 => { const R = sum([S, pol(F4, 360 - p.t4)]); return len(R) > 100 && Math.abs(R[1]) > .05 * Math.abs(R[0]) + 20; });
+    return p; },
+  story:p => `Four people pull on ropes tied to a steel ring: <b>F₁ = ${p.F1} N</b> at ${p.t1}° above the +x axis, <b>F₂ = ${p.F2} N</b> at ${p.t2}° above the −x axis, <b>F₃ = ${p.F3} N</b> at ${p.t3}° below the −x axis, and <b>F₄ = ${p.F4} N</b> at ${p.t4}° below the +x axis. Find the net force on the ring.`,
+  parts:() => polarParts('F<sub>net</sub>', 'N'), R:'F<sub>net</sub>',
+  given:p => [{label:'F₁', html:'F₁', m:p.F1, d:p.t1}, {label:'F₂', html:'F₂', m:p.F2, d:180 - p.t2}, {label:'F₃', html:'F₃', m:p.F3, d:180 + p.t3}, {label:'F₄', html:'F₄', m:p.F4, d:360 - p.t4}]},
+{ch:2, name:'Orienteering', kind:'polar', unit:'m',
+  gen:() => {
+    const p = {d1:ri(100, 500), d2:ri(100, 500), t2:ri(15, 75), t3:ri(15, 75)};
+    const S = sum([pol(p.d1, 90), pol(p.d2, 360 - p.t2)]);
+    p.d3 = until(() => ri(100, 500), d3 => { const R = sum([S, pol(d3, 180 - p.t3)]); return len(R) > 50 && Math.abs(R[1]) > .05 * Math.abs(R[0]) + 10; });
+    return p; },
+  story:p => `In an orienteering race you run <b>${p.d1} m due north</b>, then <b>${p.d2} m at ${p.t2}° S of E</b>, then <b>${p.d3} m at ${p.t3}° N of W</b>. Find your displacement from the start.`,
+  parts:() => polarParts('d', 'm'), R:'d',
+  given:p => [{label:'d₁', html:'d₁', m:p.d1, d:90}, {label:'d₂', html:'d₂', m:p.d2, d:360 - p.t2}, {label:'d₃', html:'d₃', m:p.d3, d:180 - p.t3}]},
+
+{ch:3, name:'Up, then up or down', kind:'polar', unit:'m/s',
+  gen:() => { const vi = ri(4, 15), df = pick([90, 270]); return {vi, df, vf:until(() => ri(1, 15), vf => df === 270 || vf !== vi)}; },
+  story:p => `A ball moves <b>straight up at ${p.vi} m/s</b>. A moment later it moves <b>straight ${p.df === 90 ? 'up' : 'down'} at ${p.vf} m/s</b>. Find the change in velocity Δv = v<sub>f</sub> − v<sub>i</sub>.`,
+  parts:() => polarParts('Δv', 'm/s'), R:'Δv', side:true,
+  given:p => [{label:'vi', html:'v<sub>i</sub>', m:p.vi, d:90}, {label:'vf', html:'v<sub>f</sub>', m:p.vf, d:p.df}],
+  chain:p => [{label:'vf', html:'v<sub>f</sub>', m:p.vf, d:p.df}, {label:'vi', html:'v<sub>i</sub>', m:p.vi, d:90, neg:true}]},
+{ch:3, name:'Change in position', kind:'polar', unit:'m',
+  gen:() => {
+    const p = {r1:rnd(400, 1200, 100), a1:ri(0, 359), r2:rnd(300, 1000, 100)};
+    p.a2 = until(() => ri(0, 359), a2 => { const D = sum([pol(p.r2, a2), pol(-p.r1, p.a1)]); return len(D) > 200 && Math.abs(D[1]) > .05 * Math.abs(D[0]) + 10; });
+    return p; },
+  story:p => `A delivery drone is <b>${p.r1} m from its base at ${p.a1}°</b>. Later it is <b>${p.r2} m from the base at ${p.a2}°</b>. Find its displacement Δr = r<sub>f</sub> − r<sub>i</sub>.`,
+  parts:() => polarParts('Δr', 'm'), R:'Δr',
+  given:p => [{label:'ri', html:'r<sub>i</sub>', m:p.r1, d:p.a1}, {label:'rf', html:'r<sub>f</sub>', m:p.r2, d:p.a2}],
+  chain:p => [{label:'rf', html:'r<sub>f</sub>', m:p.r2, d:p.a2}, {label:'ri', html:'r<sub>i</sub>', m:p.r1, d:p.a1, neg:true}]},
+{ch:3, name:'Subtracting components', kind:'xy', unit:'m',
+  gen:() => { const c = () => until(() => rnd(-9, 9, .01), x => Math.abs(x) >= .5); return {Ax:c(), Ay:c(), Bx:c(), By:c(), s:pick([1, -1])}; },
+  story:p => `<b>A = ${comp(p.Ax, p.Ay)} m</b> and <b>B = ${comp(p.Bx, p.By)} m</b>. Find the x and y components of <b>R = ${p.s > 0 ? 'A − B' : 'B − A'}</b>.`,
+  parts:() => [{sym:'R<sub>x</sub>', unit:'m', tol:{abs:.02}, kind:'x'}, {sym:'R<sub>y</sub>', unit:'m', tol:{abs:.02}, kind:'y'}],
+  given:p => [{label:'A', v:[p.Ax, p.Ay]}, {label:'B', v:[p.Bx, p.By]}],
+  chain:p => p.s > 0 ? [{label:'A', v:[p.Ax, p.Ay]}, {label:'B', v:[p.Bx, p.By], neg:true}] : [{label:'B', v:[p.Bx, p.By]}, {label:'A', v:[p.Ax, p.Ay], neg:true}],
+  steps:p => { const [a, b] = p.s > 0 ? ['A', 'B'] : ['B', 'A'], R = p.s > 0 ? [p.Ax - p.Bx, p.Ay - p.By] : [p.Bx - p.Ax, p.By - p.Ay];
+    return [`Rewrite as an addition: <span class="m">R = ${a} + (−${b})</span>`, `−${b} flips both signs of ${b}`, `<span class="m">R<sub>x</sub> = ${f(p.s > 0 ? p.Ax : p.Bx)} + (${f(p.s > 0 ? -p.Bx : -p.Ax)}) = ${f(R[0])} m</span>`, `<span class="m">R<sub>y</sub> = ${f(p.s > 0 ? p.Ay : p.By)} + (${f(p.s > 0 ? -p.By : -p.Ay)}) = ${f(R[1])} m</span>`]; }},
+{ch:3, name:'Racquetball rebound', kind:'polar', unit:'m/s',
+  gen:() => ({v:ri(20, 60), al:ri(15, 75)}),
+  story:p => `A racquetball moving at <b>${p.v} m/s</b> hits a wall on its right at <b>${p.al}°</b> to the wall. It rebounds at the same speed and the same ${p.al}° angle to the wall. Find the change in velocity Δv = v<sub>f</sub> − v<sub>i</sub>.`,
+  parts:() => polarParts('Δv', 'm/s'), R:'Δv',
+  given:p => [{label:'vi', html:'v<sub>i</sub>', m:p.v, d:270 + p.al}, {label:'vf', html:'v<sub>f</sub>', m:p.v, d:270 - p.al}],
+  chain:p => [{label:'vf', html:'v<sub>f</sub>', m:p.v, d:270 - p.al}, {label:'vi', html:'v<sub>i</sub>', m:p.v, d:270 + p.al, neg:true}]},
+{ch:3, name:'Rounding the corner', kind:'polar', unit:'m/s',
+  gen:() => ({v1:rnd(3, 8, .5), v2:rnd(3, 8, .5), af:pick([45, 60, 90, 120, 135])}),
+  story:p => `A runner moving <b>east at ${p.v1} m/s</b> rounds a corner and ends up moving at <b>${p.v2} m/s at ${p.af}°</b>. Find the change in velocity Δv = v<sub>f</sub> − v<sub>i</sub>.`,
+  parts:() => polarParts('Δv', 'm/s'), R:'Δv',
+  given:p => [{label:'vi', html:'v<sub>i</sub>', m:p.v1, d:0}, {label:'vf', html:'v<sub>f</sub>', m:p.v2, d:p.af}],
+  chain:p => [{label:'vf', html:'v<sub>f</sub>', m:p.v2, d:p.af}, {label:'vi', html:'v<sub>i</sub>', m:p.v1, d:0, neg:true}]},
+];
+// defaults shared by the problems
+for (const q of QS){
+  q.chain = q.chain || (q.pre ? (p => q.given(p)) : (p => q.given(p)));
+  q.target = q.target || (p => sum(q.chain(p).map(vecOf)));
+  q.ans = p => { const T = q.target(p); return q.kind === 'polar' ? [len(T), q.noDir ? Math.atan2(T[1], T[0]) / D2R : ang(T)] : T; };
+  q.steps = q.steps || (p => polarSteps(q.chain(p), q.target(p), q.unit, q.R || 'R'));
+}
+const CODES = QS.map((q, i) => { const n = i - QS.findIndex(x => x.ch === q.ch) + 1; return `${q.ch + 1}.${n}`; });
+
+/* ---------- link settings: ?q=1.1..4.5 (or level=) & the numbers & mode=test|show|solution & launch=a,b ---------- */
+const URLQ = new URLSearchParams(location.search);
+const LINK = (() => {
+  const raw = (URLQ.get('q') || URLQ.get('level') || '').trim(); if (!raw) return null;
+  let i = CODES.indexOf(raw); if (i < 0 && /^\d+$/.test(raw)) i = +raw - 1;
+  if (!QS[i]) return null;
+  const p = QS[i].gen();
+  for (const k of Object.keys(p)){ const v = parseFloat(URLQ.get(k)); if (isFinite(v)) p[k] = v; }
+  return {i, p};
+})();
+const MODE = (URLQ.get('mode') || '').toLowerCase();
+const LOCK = !!LINK, TEST = LOCK && MODE === 'test', SHOW = LOCK && MODE === 'show', SOLN = LOCK && MODE === 'solution', BARE = TEST || SHOW || SOLN;
+const NOSOL = URLQ.get('solution') === '0';
+const STU = (URLQ.get('launch') || '').split(',').map(s => parseFloat(s));
+const HAS_STU = SHOW && STU.length === 2 && STU.every(isFinite);
+if (LOCK) $('app').classList.add('locked');
+if (BARE){ document.documentElement.classList.add('bare'); $('app').classList.add('bare'); }
+if (SHOW || SOLN){ $('scene').style.cursor = 'pointer'; $('scene').title = 'Tap to replay'; }
+if (LOCK){ $('btnFresh').hidden = true; $('btnNext').hidden = true; }
+if (NOSOL) $('btnSolve').hidden = true;
+
+const store = {
+  get(k, d){ if (LOCK) return d; try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v ?? d; } catch (e) { return d; } },
+  set(k, v){ if (LOCK) return; try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+let done = store.get('vector-range-done', {});
+
+/* ---------- state and drawing ---------- */
+const S = {cur:0, p:null, P:0, target:false, answer:false, stu:null, stuT:0, hidden:SHOW, banner:null, msg:'', run:false, tries:0, solved:false, helped:false, phase:'given'};
+const cv = $('scene'), ctx = cv.getContext('2d');
+let W = 640, H = 400;
+const q = () => QS[S.cur];
+const stuVec = vals => q().kind === 'polar' ? (q().noDir ? pol(vals[0], vals[1]) : pol(vals[0], vals[1])) : vals.slice();
+
+function view(){
+  const Q = q(), p = S.p, pts = [[0, 0]], ch = Q.chain(p);
+  for (const it of Q.given(p)) pts.push(rawOf(it));
+  let acc = [0, 0]; for (const it of ch){ acc = sum([acc, vecOf(it)]); pts.push(acc.slice()); }
+  pts.push(Q.target(p));
+  if (Q.pre){ let a = [0, 0]; for (const it of Q.given(p)){ a = sum([a, vecOf(it)]); pts.push(a.slice()); } }
+  if (S.stu){ const v = stuVec(S.stu); pts.push(v, [v[0], 0]); }
+  let x0 = Math.min(...pts.map(v => v[0])), x1 = Math.max(...pts.map(v => v[0])), y0 = Math.min(...pts.map(v => v[1])), y1 = Math.max(...pts.map(v => v[1]));
+  const span = Math.max(x1 - x0, y1 - y0, 1e-6), pad = span * .14;
+  x0 -= pad; x1 += pad; y0 -= pad; y1 += pad;
+  const top = 44, bot = 26, left = 30, right = 14;
+  const sc = Math.min((W - left - right) / (x1 - x0), (H - top - bot) / (y1 - y0));
+  const ox = left + ((W - left - right) - (x1 - x0) * sc) / 2 - x0 * sc, oy = top + ((H - top - bot) - (y1 - y0) * sc) / 2 + y1 * sc;
+  return {sc, X:x => ox + x * sc, Y:y => oy - y * sc, x0, x1, y0, y1};
+}
+function niceStep(raw){ const e = Math.pow(10, Math.floor(Math.log10(raw))); for (const m of [1, 2, 5, 10]) if (m * e >= raw) return m * e; return 10 * e; }
+function label(s, x, y, color, size = 13){
+  if (!s) return;
+  ctx.font = `600 ${size}px "IBM Plex Mono", Menlo, monospace`; ctx.textAlign = 'center';
+  const w = ctx.measureText(s).width; ctx.fillStyle = 'rgba(10,14,20,.8)';
+  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - w / 2 - 4, y - size + 1, w + 8, size + 5, 3) : ctx.rect(x - w / 2 - 4, y - size + 1, w + 8, size + 5); ctx.fill();
+  ctx.fillStyle = color; ctx.fillText(s, x, y);
+}
+function arrow(V, a, b, color, lab, opt = {}){
+  const off = opt.off || 0;
+  const x1 = V.X(a[0]) + off, y1 = V.Y(a[1]), x2 = V.X(b[0]) + off, y2 = V.Y(b[1]), L = Math.hypot(x2 - x1, y2 - y1);
+  if (L < 1) return;
+  const ux = (x2 - x1) / L, uy = (y2 - y1) / L, h = Math.min(14, L * .45);
+  ctx.save(); ctx.globalAlpha = opt.alpha ?? 1;
+  if (opt.dash) ctx.setLineDash([6, 6]);
+  for (const [c, w] of [['rgba(4,7,10,.85)', (opt.w || 3.5) + 3], [color, opt.w || 3.5]]){
+    ctx.strokeStyle = c; ctx.lineWidth = w; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2 - ux * h * .8, y2 - uy * h * .8); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x2 - ux * h - uy * h * .45, y2 - uy * h + ux * h * .45); ctx.lineTo(x2 - ux * h + uy * h * .45, y2 - uy * h - ux * h * .45); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  if (lab) label(lab, (x1 + x2) / 2 - uy * 16, (y1 + y2) / 2 + ux * 16 + 5, color, 13);
+}
+const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+function paint(){
+  const Q = q(), p = S.p, V = view();
+  ctx.fillStyle = '#0f161e'; ctx.fillRect(0, 0, W, H);
+  // graph paper
+  const step = niceStep((Math.max(V.x1 - V.x0, V.y1 - V.y0)) / 10);
+  ctx.lineWidth = 1;
+  for (let x = Math.ceil(V.x0 / step) * step; x <= V.x1; x += step){ ctx.strokeStyle = Math.abs(x) < step / 2 ? '#6d7d8c' : '#1f2c38'; ctx.beginPath(); ctx.moveTo(V.X(x), 0); ctx.lineTo(V.X(x), H); ctx.stroke(); }
+  for (let y = Math.ceil(V.y0 / step) * step; y <= V.y1; y += step){ ctx.strokeStyle = Math.abs(y) < step / 2 ? '#6d7d8c' : '#1f2c38'; ctx.beginPath(); ctx.moveTo(0, V.Y(y)); ctx.lineTo(W, V.Y(y)); ctx.stroke(); }
+  if (!S.hidden){
+    ctx.font = '500 11px "IBM Plex Mono", Menlo, monospace'; ctx.fillStyle = '#8796a5'; ctx.textAlign = 'center';
+    for (let x = Math.ceil(V.x0 / step) * step; x <= V.x1; x += step) if (Math.abs(x) > step / 2) ctx.fillText(+x.toPrecision(6), V.X(x), clamp(V.Y(0) + 14, 14, H - 4));
+    ctx.textAlign = 'right';
+    for (let y = Math.ceil(V.y0 / step) * step; y <= V.y1; y += step) if (Math.abs(y) > step / 2) ctx.fillText(+y.toPrecision(6), clamp(V.X(0) - 5, 26, W - 4), V.Y(y) + 4);
+  }
+  ctx.font = '600 12px "IBM Plex Mono", Menlo, monospace'; ctx.fillStyle = '#a9b6c2'; ctx.textAlign = 'right'; ctx.fillText('+x (E)', W - 8, clamp(V.Y(0) - 6, 50, H - 8)); ctx.textAlign = 'left'; ctx.fillText('+y (N)', clamp(V.X(0) + 6, 4, W - 60), 58);
+  // origin
+  ctx.fillStyle = '#eaf0f4'; ctx.beginPath(); ctx.arc(V.X(0), V.Y(0), 3.5, 0, 7); ctx.fill();
+  // given vectors sliding tip-to-tail
+  const G = Q.given(p), CH = Q.chain(p);
+  if (Q.pre){ let a = [0, 0]; G.forEach((it, i) => { const v = vecOf(it), b = sum([a, v]); arrow(V, a, b, C[i % 4], it.label); a = b; }); }
+  else {
+    const P = S.P, moved = new Set();
+    let acc = [0, 0];
+    CH.forEach((it, i) => {
+      const t = ease(clamp(P - i, 0, 1)), v = vecOf(it), raw = rawOf(it), gi = G.findIndex(g => g.label === it.label), col = C[(gi < 0 ? i : gi) % 4];
+      const off = Q.side ? (i === 0 ? -16 : 16) : 0;
+      if (t > 0){
+        moved.add(it.label);
+        if (it.neg) arrow(V, [0, 0], raw, col, '', {alpha:.35, dash:true});
+        const a = [acc[0] * t, acc[1] * t]; arrow(V, a, sum([a, v]), col, (it.neg ? '−' : '') + it.label, {off: t > .99 ? off : 0});
+      }
+      acc = sum([acc, v]);
+    });
+    G.forEach((it, i) => { if (!moved.has(it.label)) arrow(V, [0, 0], rawOf(it), C[i % 4], it.label, {off: Q.side && P <= 0 ? (i === 0 ? -16 : 16) : 0}); });
+  }
+  // the target
+  const T = Q.target(p);
+  if (S.target){
+    const x = V.X(T[0]), y = V.Y(T[1]);
+    for (const [r, c] of [[15, '#f4f6f8'], [10.5, '#e0322a'], [6.5, '#f4f6f8'], [3, '#e0322a']]){ ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); }
+  }
+  if (S.answer){
+    const a = Q.ans(p), txt = Q.kind === 'polar' ? `${a[0] >= 0 ? f(a[0]) : ''} ${Q.unit} at ${fd(a[1])}` : `(${f(a[0])}, ${f(a[1])})`;
+    arrow(V, [0, 0], T, '#7dffc1', '', {w:3});
+    ctx.font = '600 13px "IBM Plex Mono", Menlo, monospace'; const lw = ctx.measureText(txt.trim()).width / 2 + 26;   // beside the target, on the side away from the origin
+    label(txt.trim(), clamp(V.X(T[0]) + (T[0] < 0 ? -lw : lw), lw, W - lw), clamp(V.Y(T[1]) + 5, 80, H - 8), '#7dffc1', 13);
+  }
+  // the student's vector
+  if (S.stu){
+    const v = stuVec(S.stu), t = S.stuT;
+    if (Q.kind === 'polar'){ const k = ease(clamp(t, 0, 1)); arrow(V, [0, 0], [v[0] * k, v[1] * k], '#ff8a2a', t >= 1 ? 'yours' : ''); }
+    else {
+      const kx = ease(clamp(t, 0, 1)), ky = ease(clamp(t - 1, 0, 1));
+      arrow(V, [0, 0], [v[0] * kx, 0], '#ff8a2a', t >= 1 ? 'x' : '', {w:3});
+      if (t > 1) arrow(V, [v[0], 0], [v[0], v[1] * ky], '#ff8a2a', t >= 2 ? 'y' : '', {w:3});
+      if (t >= 2) arrow(V, [0, 0], v, '#ffb46b', '', {w:2, dash:true});
+    }
+  }
+  // readouts
+  ctx.font = '600 14px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'left';
+  const name = Q.name, w = ctx.measureText(name).width; ctx.fillStyle = 'rgba(10,14,20,.78)'; ctx.fillRect(8, 8, w + 20, 28); ctx.fillStyle = '#7dffc1'; ctx.fillText(name, 18, 27);
+  let tag = '';
+  if (SHOW) tag = HAS_STU && S.phase !== 'target' && S.phase !== 'given' ? `Your answer: ${S.stu ? S.stu.map(f).join(', ') : ''}` : 'Target run';
+  if (SOLN) tag = 'Correct answer';
+  if (tag){ const tw = ctx.measureText(tag).width; ctx.fillStyle = 'rgba(10,14,20,.78)'; ctx.fillRect(W - tw - 28, 8, tw + 20, 28); ctx.fillStyle = tag.startsWith('Your') ? '#ffb46b' : '#eaf0f4'; ctx.fillText(tag, W - tw - 18, 27); }
+  if (S.msg){ ctx.font = '600 14px "IBM Plex Sans", system-ui, sans-serif'; const mw = ctx.measureText(S.msg).width; ctx.fillStyle = 'rgba(10,14,20,.85)'; ctx.fillRect(8, 42, mw + 20, 26); ctx.fillStyle = S.msgOk ? '#7dffc1' : '#ff8b7a'; ctx.fillText(S.msg, 18, 60); }
+  if ((SHOW || SOLN) && !S.run && S.phase === 'done'){ ctx.font = '600 13px "IBM Plex Mono", Menlo, monospace'; const h2 = 'Tap to replay', hw = ctx.measureText(h2).width; ctx.fillStyle = 'rgba(10,14,20,.72)'; ctx.fillRect(W - hw - 28, 42, hw + 20, 24); ctx.fillStyle = '#eaf0f4'; ctx.fillText(h2, W - hw - 18, 59); }
+  if (S.banner){
+    const size = clamp(W / 12, 24, 52), a = reduceMotion ? 1 : clamp((S.banner.until - performance.now()) / 500, 0, 1);
+    ctx.globalAlpha = a; ctx.font = `400 ${size}px "Saira Stencil One", Impact, sans-serif`; ctx.textAlign = 'center';
+    ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(8,12,18,.85)'; ctx.lineJoin = 'round'; ctx.strokeText(S.banner.text, W / 2, H / 2);
+    ctx.fillStyle = S.banner.c; ctx.fillText(S.banner.text, W / 2, H / 2); ctx.globalAlpha = 1;
+  }
+}
+
+/* ---------- animation ---------- */
+const sleep = ms => new Promise(r => setTimeout(r, reduceMotion ? 0 : ms));
+function tween(key, to, ms){
+  return new Promise(res => {
+    const from = S[key], t0 = performance.now();
+    if (reduceMotion){ S[key] = to; paint(); return res(); }
+    const step = now => { const k = clamp((now - t0) / ms, 0, 1); S[key] = from + (to - from) * k; paint(); k < 1 ? requestAnimationFrame(step) : res(); };
+    requestAnimationFrame(step);
+  });
+}
+function bannerLoop(){ const tick = () => { paint(); if (S.banner && performance.now() < S.banner.until) requestAnimationFrame(tick); else { S.banner = null; paint(); } }; requestAnimationFrame(tick); }
+async function targetRun(){
+  const n = q().chain(S.p).length;
+  S.P = 0; S.target = false; S.answer = false; paint();
+  if (!q().pre && n) await tween('P', n, 750 * n);
+  S.target = true; paint(); await sleep(250);
+}
+function verdict(vals){
+  const Q = q(), a = Q.ans(S.p), parts = Q.parts(S.p);
+  const res = parts.map((pt, k) => {
+    let d = vals[k] - a[k];
+    if (pt.tol.angle) d = ((d % 360) + 540) % 360 - 180;
+    const ok = pt.tol.abs != null ? Math.abs(d) <= pt.tol.abs + 1e-9 : Math.abs(d) <= pt.tol.rel * Math.abs(a[k]) + 1e-9;
+    const word = ok ? 'OK' : pt.kind === 'dir' ? (d > 0 ? 'too far counterclockwise' : 'too far clockwise') : (d > 0 ? 'too large' : 'too small');
+    return {ok, text:`${pt.sym.replace(/<[^>]+>/g, '')}: ${word}`};
+  });
+  return {hit:res.every(r => r.ok), parts:res};
+}
+async function studentRun(vals){
+  S.stu = vals.slice(); S.stuT = 0; S.msg = ''; paint();
+  await tween('stuT', q().kind === 'polar' ? 1 : 2, q().kind === 'polar' ? 900 : 1300);
+  const v = verdict(vals);
+  S.banner = {text:v.hit ? 'ON TARGET' : 'MISS', c:v.hit ? '#7dffc1' : '#ff8b7a', until:performance.now() + 1700};
+  S.msg = v.hit ? '' : v.parts.map(r => r.text).join(' · '); S.msgOk = v.hit;
+  bannerLoop();
+  return v;
+}
+
+/* ---------- problem flow ---------- */
+function loadQ(i, fresh = true){
+  S.cur = i; if (fresh) S.p = q().gen();
+  Object.assign(S, {P:0, target:false, answer:false, stu:null, stuT:0, banner:null, msg:'', run:false, tries:0, solved:false, helped:false, phase:'given'});
+  const Q = q();
+  $('tag').textContent = `Problem ${CODES[i]} · ${CHAPTERS[Q.ch]}`;
+  $('qName').textContent = Q.name;
+  $('story').innerHTML = Q.story(S.p);
+  $('dirNote').textContent = Q.kind === 'polar' && !Q.noDir ? DIR : '';
+  $('dirNote').hidden = !(Q.kind === 'polar' && !Q.noDir);
+  const form = $('form'); form.textContent = '';
+  Q.parts(S.p).forEach((pt, k) => {
+    const lab = document.createElement('label'); lab.htmlFor = 'in' + k; lab.innerHTML = pt.sym + ' =';
+    const wrap = document.createElement('div'); const inp = document.createElement('input');
+    inp.id = 'in' + k; inp.type = 'text'; inp.inputMode = 'decimal'; inp.autocomplete = 'off';
+    const u = document.createElement('span'); u.className = 'u'; u.textContent = pt.unit;
+    wrap.append(inp, u); form.append(lab, wrap);
+  });
+  $('errMsg').hidden = true; $('debrief').hidden = true;
+  store.set('vector-range-cur', i);
+  cv.setAttribute('aria-label', `Vector diagram: ${Q.name}. ${Q.story(S.p).replace(/<[^>]+>/g, '')}`);
+  renderNav(); paint();
+}
+function renderNav(){
+  const nav = $('nav'); nav.textContent = '';
+  CHAPTERS.forEach((c, ci) => {
+    const g2 = document.createElement('div'); g2.className = 'group';
+    const lab = document.createElement('span'); lab.textContent = c; g2.append(lab);
+    QS.forEach((Q, i) => { if (Q.ch !== ci) return;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'lv' + (i === S.cur ? ' cur' : '') + (done[i] ? ' done' : '');
+      b.textContent = CODES[i]; b.setAttribute('aria-label', `Problem ${CODES[i]}, ${Q.name}${done[i] ? ', solved' : ''}`);
+      b.onclick = () => { if (!S.run) loadQ(i); }; g2.append(b); });
+    nav.append(g2);
+  });
+  $('total').textContent = `✓ ${Object.keys(done).length} of ${QS.length}`;
+}
+async function fire(){
+  if (S.run || BARE) return;
+  const parts = q().parts(S.p), vals = parts.map((_, k) => parseFloat($('in' + k).value.trim().replace('−', '-').replace(',', '.')));
+  if (!vals.every(isFinite)){ $('errMsg').textContent = 'Enter a number in each box.'; $('errMsg').hidden = false; return; }
+  $('errMsg').hidden = true; $('debrief').hidden = true; S.run = true; $('btnGo').disabled = true; S.tries++;
+  S.stu = null; await targetRun(); const v = await studentRun(vals);
+  S.run = false; $('btnGo').disabled = false;
+  const line = $('resultLine');
+  if (v.hit){ line.textContent = S.helped ? 'On target, using the worked solution.' : `On target on try ${S.tries}.`; line.className = 'result hit'; if (!S.helped){ done[S.cur] = 1; store.set('vector-range-done', done); } if (!NOSOL) showSteps(); $('btnNext').hidden = LOCK || S.cur >= QS.length - 1; }
+  else { line.textContent = 'Missed the target.'; line.className = 'result miss'; $('btnSolve').hidden = S.helped || NOSOL; $('btnNext').hidden = true; if (!S.helped) $('stepsBox').hidden = true; }
+  $('facts').innerHTML = v.parts.map(r => `<li>${r.text}</li>`).join('');
+  $('debrief').hidden = false; renderNav();
+  if (!BARE) $('debrief').scrollIntoView({block:'nearest', behavior:reduceMotion ? 'auto' : 'smooth'});
+}
+function showSteps(){ $('steps').innerHTML = q().steps(S.p).map(s => `<li>${s}</li>`).join(''); $('stepsBox').hidden = false; $('btnSolve').hidden = true; }
+$('form').addEventListener('submit', e => { e.preventDefault(); fire(); });
+$('btnSolve').onclick = () => { if (NOSOL) return; S.helped = true; showSteps(); };
+$('btnFresh').onclick = () => { if (!LOCK && !S.run) loadQ(S.cur); };
+$('btnNext').onclick = () => { if (!LOCK && !S.run) loadQ(S.cur + 1); };
+
+async function playShow(){
+  if (S.run) return; S.run = true;
+  S.hidden = true; S.stu = null; S.msg = ''; S.phase = 'target';
+  await targetRun();
+  if (HAS_STU){ await sleep(1200); S.phase = 'yours'; await studentRun(STU); }
+  else { S.banner = {text:'TARGET', c:'#eaf0f4', until:performance.now() + 1100}; bannerLoop(); }
+  S.phase = 'done'; S.run = false; paint();
+}
+async function playSolution(){
+  if (S.run) return; S.run = true; S.phase = 'target';
+  await targetRun(); S.answer = true; paint();
+  S.phase = 'done'; S.run = false; paint();
+}
+
+function resize(){
+  const box = $('range'), wide = innerWidth > 900 && !BARE;
+  const aw = box.clientWidth, nW = Math.floor(aw), nH = Math.floor(wide ? Math.min(box.clientHeight, aw * .72) : aw * .62), dpr = devicePixelRatio || 1;
+  if (nW === W && nH === H && cv.width === Math.round(W * dpr)) return;
+  W = nW; H = nH; cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (S.p) paint();
+}
+new ResizeObserver(resize).observe($('range'));
+addEventListener('resize', resize);
+
+function start(){
+  resize();
+  if (LINK){ S.p = LINK.p; loadQ(LINK.i, false); }
+  else { const cur = store.get('vector-range-cur', 0); loadQ(QS[cur] ? cur : 0); }
+  if (SHOW){ cv.addEventListener('click', playShow); setTimeout(playShow, 900); }
+  if (SOLN){ cv.addEventListener('click', playSolution); setTimeout(playSolution, 700); }
+  if (document.fonts?.ready) document.fonts.ready.then(paint);
+}
+start();
+})();
+</script>
+</body>
+</html>
