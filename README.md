@@ -54,6 +54,18 @@ Links use `level=1.1` to `level=4.5` to choose the question, because `q` is one 
 `motion-graphs-myopenmath.md` has MyOpenMath code for all 20, and `build_graphs_myopenmath.py`
 regenerates it.
 
+## Constant Acceleration Lab
+
+`kinematics.html` has 20 questions based on the PHYS 205 Lecture 7 examples (one-dimensional motion
+with constant acceleration), in four chapters: Speeding up, Slowing down, Two stages and Free fall. Each
+runs in its own scene: a running track, a road, a night road with a deer, an ice rink with a game clock, a
+ball thrown up beside a height pole, and a high jump. A speedometer, stopwatch and distance or height
+markings stay blank when they would give the answer away. Questions 2.5 and 4.3 replay the motion with the
+student's own value.
+
+Links use `level=1.1` to `level=4.5`. `kinematics-myopenmath.md` has MyOpenMath code for all 20, and
+`build_kinematics_myopenmath.py` regenerates it.
+
 ### MyOpenMath (Proving Ground)
 
 `proving-ground-myopenmath.md` has ready-to-paste Common Control and Question Text for all

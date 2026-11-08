@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Constant Acceleration Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=IBM+Plex+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --paper:#18212b; --sheet:#222e3b; --rule:#3d4d5e; --ink:#eaf0f4; --muted:#a9b6c2;
+  --safety:#ff8a2a; --hit:#7dffc1; --miss:#ff8b7a; --field:#0f161e; --on-safety:#20140a;
+  --f-display:"Saira Stencil One", Impact, sans-serif; --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif; --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--f-body); font-size:16px; line-height:1.45}
+button,input{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--safety); outline-offset:2px}
+.app{height:100%; display:grid; grid-template-rows:auto minmax(0,1fr); grid-template-columns:minmax(0,1fr) 370px; gap:10px 16px;
+  padding-block:10px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px))}
+header{grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:6px 18px}
+h1{margin:0; font-family:var(--f-display); font-weight:400; font-size:30px; line-height:1; letter-spacing:.02em}
+.nav{display:flex; flex-wrap:wrap; gap:6px 14px; flex:1; min-width:0}
+.group{display:flex; align-items:center; gap:3px; flex-wrap:wrap}
+.group > span{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-right:3px}
+.lv{min-width:34px; height:34px; border:1px solid var(--rule); background:var(--sheet); border-radius:3px; cursor:pointer; font-family:var(--f-mono); font-size:14px; font-weight:600; padding:0}
+.lv.cur{background:var(--ink); color:var(--sheet); border-color:var(--ink)}
+.lv.done{border-color:var(--hit); box-shadow:inset 0 -3px 0 var(--hit)}
+.lv.cur.done{box-shadow:inset 0 -3px 0 #0f7a4d}
+.total{font-family:var(--f-mono); font-size:14px; font-weight:600; white-space:nowrap}
+.range{min-width:0; min-height:0; display:flex; align-items:flex-start; justify-content:center}
+#scene{display:block; border:1px solid var(--rule); border-radius:4px; background:var(--field); max-width:100%}
+.test{min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-bottom:6px}
+.sheet{background:var(--sheet); border:1px solid var(--rule); padding:12px 14px; display:flex; flex-direction:column; gap:8px}
+.tag{font-family:var(--f-mono); font-size:13px; font-weight:600; color:var(--safety)}
+h2{margin:0; font-size:20px; line-height:1.2}
+.story{margin:0}
+.story b{font-family:var(--f-mono); font-weight:600}
+.entry{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.entry label{font-family:var(--f-mono); font-weight:600}
+#ans{width:7.5em; font-family:var(--f-mono); font-weight:600; font-size:18px; padding:7px 8px; background:var(--field); border:2px solid var(--safety); border-radius:2px; color:var(--ink)}
+.u{font-family:var(--f-mono); color:var(--muted)}
+.btn{border:1px solid var(--ink); background:transparent; padding:9px 13px; font-weight:700; cursor:pointer; border-radius:2px}
+.btn.go{background:var(--safety); border-color:var(--safety); color:var(--on-safety)}
+.btn:disabled{opacity:.45; cursor:default}
+.row{display:flex; flex-wrap:wrap; gap:8px}
+.err{margin:0; color:var(--miss); font-weight:700; font-size:15px}
+.note{margin:0; font-size:14.5px; color:var(--muted)}
+.label{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted)}
+.result{font-weight:700; font-size:17px; margin:0}
+.result.hit{color:var(--hit)} .result.miss{color:var(--miss)}
+.steps{margin:0; padding-left:20px; display:flex; flex-direction:column; gap:4px; font-size:15px}
+.steps .m{font-family:var(--f-mono); font-size:14.5px}
+.app.locked .nav, .app.locked .total{display:none}
+.app.locked h1{font-size:22px}
+html.bare, html.bare body{height:auto}
+.app.bare{height:auto; grid-template-columns:minmax(0,1fr); grid-template-rows:auto}
+.app.bare header, .app.bare .test{display:none}
+.app.bare .range{display:block}
+@media (max-width:900px){
+  html,body{height:auto}
+  .app{grid-template-columns:minmax(0,1fr); grid-template-rows:none; height:auto}
+  .test{overflow:visible}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <h1>Constant Acceleration Lab</h1>
+    <nav class="nav" id="nav" aria-label="Questions"></nav>
+    <div class="total" id="total"></div>
+  </header>
+  <section class="range" id="range"><canvas id="scene" role="img" aria-label="Motion scene"></canvas></section>
+  <aside class="test">
+    <section class="sheet">
+      <div class="tag" id="tag"></div>
+      <h2 id="qName"></h2>
+      <p class="story" id="story"></p>
+      <form class="entry" id="form" autocomplete="off">
+        <label for="ans" id="ansLabel"></label>
+        <input id="ans" type="text" inputmode="decimal" autocomplete="off">
+        <span class="u" id="ansUnit"></span>
+        <button class="btn go" id="btnGo" type="submit">Run</button>
+      </form>
+      <p class="err" id="errMsg" hidden></p>
+      <p class="note" id="note"></p>
+    </section>
+    <section class="sheet" id="debrief" hidden>
+      <p class="result" id="resultLine"></p>
+      <div id="stepsBox" hidden><div class="label">Worked solution</div><ol class="steps" id="steps"></ol></div>
+      <div class="row">
+        <button class="btn" id="btnSolve" type="button">Show worked solution</button>
+        <button class="btn" id="btnFresh" type="button">New numbers</button>
+        <button class="btn go" id="btnNext" type="button" hidden>Next question</button>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const g = 9.8;
+const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const rnd = (a, b, s) => { const n = Math.floor((b - a) / s + 1e-9); return +(a + s * Math.floor(Math.random() * (n + 1))).toFixed(6); };
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const until = (make, ok) => { for (let k = 0; k < 20000; k++){ const v = make(); if (ok(v)) return v; } throw new Error('no valid numbers'); };
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const minus = s => String(s).replace(/^-/, '−');
+const f = x => { if (!isFinite(x)) return '∞'; if (Math.abs(x) < 5e-10) return '0'; const a = Math.abs(x); return minus(a >= 100 ? x.toFixed(0) : a >= 10 ? x.toFixed(1) : a >= 1 ? x.toFixed(2) : x.toFixed(3)); };
+const n = x => minus(+(+x).toFixed(4));
+const NOTE = 'Use g = 9.80 m/s² for free fall, and give three significant figures. Readouts that would give the answer away stay blank until you answer.';
+
+/* ---------- motions: position s(t) along the motion (m), velocity, and how long to show ---------- */
+const accel = (v0, a, T) => ({dur:T, s:t => v0 * t + .5 * a * t * t, v:t => v0 + a * t});
+const stopping = (v0, a) => { const ts = -v0 / a; return {dur:ts, s:t => { const u = Math.min(t, ts); return v0 * u + .5 * a * u * u; }, v:t => t < ts ? v0 + a * t : 0}; };
+const twoStage = p => { const v1 = p.a1 * p.t1, x1 = .5 * p.a1 * p.t1 * p.t1; return {dur:p.t1 + p.t2, s:t => t <= p.t1 ? .5 * p.a1 * t * t : x1 + v1 * (t - p.t1) + .5 * p.a2 * (t - p.t1) ** 2, v:t => t <= p.t1 ? p.a1 * t : v1 + p.a2 * (t - p.t1)}; };
+const throwUp = (v0, T, y0 = 0) => ({dur:T, s:t => y0 + v0 * t - .5 * g * t * t, v:t => v0 - g * t});
+const puckRun = (v0, a, T, D) => { const raw = accel(v0, a, T), tg = (v0 - Math.sqrt(v0 * v0 + 2 * a * D)) / -a; return {dur:T, s:t => { const x = raw.s(t); return x <= D ? x : Math.min(D + 1.2, D + (x - D) * .3); }, v:t => raw.s(t) <= D ? raw.v(t) : Math.max(0, raw.v(tg) * (1 - (t - tg) * 3)), tg}; };
+
+/* ---------- the 20 questions (after Lecture 7, Examples 1 to 8) ---------- */
+const CHAPTERS = ['Speeding up', 'Slowing down', 'Two stages', 'Free fall'];
+const runnerGen = () => ({v0:rnd(1, 3, .5), a:rnd(.5, 2, .1), t:ri(2, 5)});
+const runnerToGen = () => { const v0 = rnd(1, 3, .5); return {v0, a:rnd(.5, 2, .1), vf:+(v0 + rnd(2, 5, .5)).toFixed(4)}; };
+const carGen = () => { const v0 = ri(20, 35), a = -ri(2, 5); return {v0, a, t:until(() => ri(2, 4), t => v0 + a * t > 0)}; };
+const deerGen = () => { const a = -rnd(3, 5, .1), D = ri(18, 40); return {a, D, v0:until(() => rnd(9, 16, .1), v0 => v0 * v0 / (-2 * a) < D - 1)}; };
+const twoGen = () => { const a1 = rnd(1.5, 3, .5), t1 = ri(4, 6); return {a1, t1, a2:until(() => -rnd(1, 3, .5), a2 => a1 * t1 + a2 * 4 > .5), t2:ri(2, 4)}; };   // still moving forward after braking, however long the braking
+const puckGen = () => ({v0:ri(20, 35), a:-rnd(.3, .8, .1), D:ri(25, 45), t:rnd(1, 1.5, .05)});
+const jumpGen = () => ({v0:rnd(3.5, 5, .1), yi:rnd(1, 1.3, .05), bar:rnd(1.9, 2.5, .05)});
+const QS = [
+{ch:0, name:'Runner: final velocity', scene:'track', sym:'v', unit:'m/s', gen:runnerGen, hide:['speed'], probe:'speed',
+  story:p => `A runner moving at <b>${n(p.v0)} m/s</b> speeds up at a constant <b>${n(p.a)} m/s²</b> for <b>${p.t} s</b>. What is the runner's velocity at the end of this time?`,
+  motion:p => accel(p.v0, p.a, p.t), ans:p => p.v0 + p.a * p.t,
+  steps:p => [`<span class="m">v = v₀ + aΔt = ${n(p.v0)} + (${n(p.a)})(${p.t}) = ${f(p.v0 + p.a * p.t)} m/s</span>`]},
+{ch:0, name:'Runner: distance', scene:'track', sym:'Δx', unit:'m', gen:runnerGen, hide:['scale'], probe:'dist',
+  story:p => `A runner moving at <b>${n(p.v0)} m/s</b> speeds up at a constant <b>${n(p.a)} m/s²</b> for <b>${p.t} s</b>. What distance does the runner cover in this time?`,
+  motion:p => accel(p.v0, p.a, p.t), ans:p => p.v0 * p.t + .5 * p.a * p.t * p.t,
+  steps:p => [`<span class="m">Δx = v₀Δt + ½a(Δt)² = (${n(p.v0)})(${p.t}) + ½(${n(p.a)})(${p.t})² = ${f(p.v0 * p.t + .5 * p.a * p.t * p.t)} m</span>`]},
+{ch:0, name:'Runner: time to top speed', scene:'track', sym:'Δt', unit:'s', gen:runnerToGen, hide:['clock'], probe:'time',
+  story:p => `A runner moving at <b>${n(p.v0)} m/s</b> speeds up at a constant <b>${n(p.a)} m/s²</b> until reaching <b>${n(p.vf)} m/s</b>. How long does this take?`,
+  motion:p => accel(p.v0, p.a, (p.vf - p.v0) / p.a), ans:p => (p.vf - p.v0) / p.a,
+  steps:p => [`Solve <span class="m">v = v₀ + aΔt</span> for Δt:`, `<span class="m">Δt = (v − v₀)/a = (${n(p.vf)} − ${n(p.v0)})/${n(p.a)} = ${f((p.vf - p.v0) / p.a)} s</span>`]},
+{ch:0, name:'Runner: distance to top speed', scene:'track', sym:'Δx', unit:'m', gen:runnerToGen, hide:['scale'], probe:'dist',
+  story:p => `A runner moving at <b>${n(p.v0)} m/s</b> speeds up at a constant <b>${n(p.a)} m/s²</b> until reaching <b>${n(p.vf)} m/s</b>. How far does the runner travel while speeding up?`,
+  motion:p => accel(p.v0, p.a, (p.vf - p.v0) / p.a), ans:p => (p.vf * p.vf - p.v0 * p.v0) / (2 * p.a),
+  steps:p => [`No time is given, so use <span class="m">v² = v₀² + 2aΔx</span>:`, `<span class="m">Δx = (v² − v₀²)/(2a) = (${n(p.vf)}² − ${n(p.v0)}²)/(2 × ${n(p.a)}) = ${f((p.vf * p.vf - p.v0 * p.v0) / (2 * p.a))} m</span>`]},
+{ch:0, name:'Sprint from the blocks', scene:'track', sym:'v', unit:'m/s', gen:() => ({a:rnd(1, 2.5, .1), D:ri(10, 25)}), hide:['speed'], probe:'speed', finish:p => p.D,
+  story:p => `A sprinter starts from rest and accelerates at a constant <b>${n(p.a)} m/s²</b> over the first <b>${p.D} m</b>. How fast is the sprinter running at the ${p.D} m mark?`,
+  motion:p => accel(0, p.a, Math.sqrt(2 * p.D / p.a)), ans:p => Math.sqrt(2 * p.a * p.D),
+  steps:p => [`From rest, with no time given: <span class="m">v² = 0 + 2aΔx</span>`, `<span class="m">v = √(2 × ${n(p.a)} × ${p.D}) = ${f(Math.sqrt(2 * p.a * p.D))} m/s</span>`]},
+
+{ch:1, name:'Braking car: velocity', scene:'road', sym:'v', unit:'m/s', gen:carGen, hide:['speed'], probe:'speed',
+  story:p => `A car moving at <b>${p.v0} m/s</b> brakes with a constant acceleration of <b>${n(p.a)} m/s²</b>. What is its velocity after <b>${p.t} s</b> of braking?`,
+  motion:p => accel(p.v0, p.a, p.t), ans:p => p.v0 + p.a * p.t,
+  steps:p => [`<span class="m">v = v₀ + aΔt = ${p.v0} + (${n(p.a)})(${p.t}) = ${f(p.v0 + p.a * p.t)} m/s</span>`]},
+{ch:1, name:'Braking car: distance', scene:'road', sym:'Δx', unit:'m', gen:carGen, hide:['scale'], probe:'dist',
+  story:p => `A car moving at <b>${p.v0} m/s</b> brakes with a constant acceleration of <b>${n(p.a)} m/s²</b>. How far does it travel during the first <b>${p.t} s</b> of braking?`,
+  motion:p => accel(p.v0, p.a, p.t), ans:p => p.v0 * p.t + .5 * p.a * p.t * p.t,
+  steps:p => [`<span class="m">Δx = v₀Δt + ½a(Δt)² = (${p.v0})(${p.t}) + ½(${n(p.a)})(${p.t})² = ${f(p.v0 * p.t + .5 * p.a * p.t * p.t)} m</span>`]},
+{ch:1, name:'Braking car: time to stop', scene:'road', sym:'Δt', unit:'s', gen:carGen, hide:['clock'], probe:'time',
+  story:p => `A car moving at <b>${p.v0} m/s</b> brakes with a constant acceleration of <b>${n(p.a)} m/s²</b>. How long does it take the car to come to rest?`,
+  motion:p => stopping(p.v0, p.a), ans:p => -p.v0 / p.a,
+  steps:p => [`At rest, v = 0. Solve <span class="m">v = v₀ + aΔt</span>:`, `<span class="m">Δt = (0 − ${p.v0})/(${n(p.a)}) = ${f(-p.v0 / p.a)} s</span>`]},
+{ch:1, name:'Deer in the headlights', scene:'deer', sym:'d', unit:'m', gen:deerGen, hide:['scale'], probe:'gap',
+  story:p => `A park ranger driving at <b>${n(p.v0)} m/s</b> sees a deer <b>${p.D} m</b> ahead and brakes immediately with a constant acceleration of <b>${n(p.a)} m/s²</b>. How close does the ranger come to hitting the deer?`,
+  motion:p => stopping(p.v0, p.a), ans:p => p.D - p.v0 * p.v0 / (-2 * p.a),
+  steps:p => { const s = p.v0 * p.v0 / (-2 * p.a); return [`Stopping distance from <span class="m">v² = v₀² + 2aΔx</span> with v = 0:`, `<span class="m">Δx = (0 − ${n(p.v0)}²)/(2 × ${n(p.a)}) = ${f(s)} m</span>`, `<span class="m">d = ${p.D} − ${f(s)} = ${f(p.D - s)} m</span>`]; }},
+{ch:1, name:'Brake hard enough', scene:'deer', sym:'a', unit:'m/s²', gen:() => ({D:ri(18, 40), v0:rnd(9, 16, .1)}), hide:['scale'], probe:'brake',
+  story:p => `A ranger driving at <b>${n(p.v0)} m/s</b> sees a deer <b>${p.D} m</b> ahead. What constant acceleration would stop the vehicle exactly at the deer? (Include the sign.)`,
+  motion:(p, a) => a == null ? stopping(p.v0, -p.v0 * p.v0 / (2 * p.D)) : brakeWith(p, a), ans:p => -p.v0 * p.v0 / (2 * p.D),
+  steps:p => [`Stop (v = 0) in exactly Δx = ${p.D} m: <span class="m">0 = v₀² + 2aΔx</span>`, `<span class="m">a = −v₀²/(2Δx) = −${n(p.v0)}²/(2 × ${p.D}) = ${f(-p.v0 * p.v0 / (2 * p.D))} m/s²</span>`, `The minus sign means the acceleration points opposite the motion: the car slows down.`]},
+
+{ch:2, name:'Speed up, then brake: speed', scene:'road2', sym:'v', unit:'m/s', gen:twoGen, hide:['speed'], probe:'speed',
+  story:p => `A car starts from rest and speeds up at <b>${n(p.a1)} m/s²</b> for <b>${p.t1} s</b>. The driver then brakes at <b>${n(p.a2)} m/s²</b> for <b>${p.t2} s</b>. How fast is the car going at the end of the braking?`,
+  motion:twoStage, ans:p => p.a1 * p.t1 + p.a2 * p.t2,
+  steps:p => [`Stage 1: <span class="m">v₁ = 0 + (${n(p.a1)})(${p.t1}) = ${f(p.a1 * p.t1)} m/s</span>`, `Stage 2 starts at v₁: <span class="m">v₂ = ${f(p.a1 * p.t1)} + (${n(p.a2)})(${p.t2}) = ${f(p.a1 * p.t1 + p.a2 * p.t2)} m/s</span>`]},
+{ch:2, name:'Speed up, then brake: distance', scene:'road2', sym:'Δx', unit:'m', gen:twoGen, hide:['scale'], probe:'dist',
+  story:p => `A car starts from rest and speeds up at <b>${n(p.a1)} m/s²</b> for <b>${p.t1} s</b>. The driver then brakes at <b>${n(p.a2)} m/s²</b> for <b>${p.t2} s</b>. How far has the car gone in total?`,
+  motion:twoStage, ans:p => .5 * p.a1 * p.t1 * p.t1 + p.a1 * p.t1 * p.t2 + .5 * p.a2 * p.t2 * p.t2,
+  steps:p => { const v1 = p.a1 * p.t1, x1 = .5 * p.a1 * p.t1 * p.t1, x2 = v1 * p.t2 + .5 * p.a2 * p.t2 * p.t2; return [`Stage 1: <span class="m">Δx₁ = ½(${n(p.a1)})(${p.t1})² = ${f(x1)} m</span>, ending at v₁ = ${f(v1)} m/s`, `Stage 2: <span class="m">Δx₂ = (${f(v1)})(${p.t2}) + ½(${n(p.a2)})(${p.t2})² = ${f(x2)} m</span>`, `<span class="m">Δx = ${f(x1)} + ${f(x2)} = ${f(x1 + x2)} m</span>`]; }},
+{ch:2, name:'Beat the buzzer', scene:'ice', sym:'Δx', unit:'m', gen:puckGen, hide:['scale'], probe:'dist',
+  story:p => `With <b>${n(p.t)} s</b> left in the game, a hockey player shoots the puck at <b>${p.v0} m/s</b> toward an empty goal <b>${p.D} m</b> away. The ice slows the puck at <b>${n(p.a)} m/s²</b>. How far does the puck slide before the buzzer (ignore the goal)?`,
+  motion:p => puckRun(p.v0, p.a, p.t, p.D), ans:p => p.v0 * p.t + .5 * p.a * p.t * p.t,
+  steps:p => { const x = p.v0 * p.t + .5 * p.a * p.t * p.t; return [`<span class="m">Δx = v₀Δt + ½a(Δt)² = (${p.v0})(${n(p.t)}) + ½(${n(p.a)})(${n(p.t)})² = ${f(x)} m</span>`, x >= p.D ? `${f(x)} m is more than ${p.D} m, so the puck reaches the goal before time runs out.` : `${f(x)} m is less than ${p.D} m, so time runs out first.`]; }},
+{ch:2, name:'Puck: speed at the goal', scene:'ice', sym:'v', unit:'m/s', gen:puckGen, hide:['speed'], probe:'speed',
+  story:p => `A hockey puck leaves the stick at <b>${p.v0} m/s</b> toward a goal <b>${p.D} m</b> away. The ice slows it at <b>${n(p.a)} m/s²</b>. How fast is the puck moving when it reaches the goal?`,
+  motion:p => { const tg = (p.v0 - Math.sqrt(p.v0 * p.v0 + 2 * p.a * p.D)) / -p.a; return puckRun(p.v0, p.a, tg + .25, p.D); }, ans:p => Math.sqrt(p.v0 * p.v0 + 2 * p.a * p.D),
+  steps:p => [`No time is given: <span class="m">v² = v₀² + 2aΔx</span>`, `<span class="m">v = √(${p.v0}² + 2(${n(p.a)})(${p.D})) = ${f(Math.sqrt(p.v0 * p.v0 + 2 * p.a * p.D))} m/s</span>`]},
+{ch:2, name:'Puck: time to the goal', scene:'ice', sym:'Δt', unit:'s', gen:puckGen, hide:['clock'], probe:'time',
+  story:p => `A hockey puck leaves the stick at <b>${p.v0} m/s</b> toward a goal <b>${p.D} m</b> away. The ice slows it at <b>${n(p.a)} m/s²</b>. How long does the puck take to reach the goal?`,
+  motion:p => { const tg = (p.v0 - Math.sqrt(p.v0 * p.v0 + 2 * p.a * p.D)) / -p.a; return puckRun(p.v0, p.a, tg + .25, p.D); }, ans:p => (p.v0 - Math.sqrt(p.v0 * p.v0 + 2 * p.a * p.D)) / -p.a,
+  steps:p => { const v = Math.sqrt(p.v0 * p.v0 + 2 * p.a * p.D); return [`First the speed at the goal: <span class="m">v = √(${p.v0}² + 2(${n(p.a)})(${p.D})) = ${f(v)} m/s</span>`, `Then <span class="m">Δt = (v − v₀)/a = (${f(v)} − ${p.v0})/(${n(p.a)}) = ${f((v - p.v0) / p.a)} s</span>`]; }},
+
+{ch:3, name:'Ball thrown up: height', scene:'ball', sym:'Δy', unit:'m', gen:() => ({v0:rnd(10, 30, .5)}), hide:['scale'], probe:'height',
+  story:p => `A ball is thrown straight up from ground level at <b>${n(p.v0)} m/s</b>. How high does it rise?`,
+  motion:p => throwUp(p.v0, 2 * p.v0 / g), ans:p => p.v0 * p.v0 / (2 * g),
+  steps:p => [`At the top, v = 0: <span class="m">0 = v₀² − 2gΔy</span>`, `<span class="m">Δy = ${n(p.v0)}²/(2 × 9.80) = ${f(p.v0 * p.v0 / (2 * g))} m</span>`]},
+{ch:3, name:'Ball thrown up: time of flight', scene:'ball', sym:'Δt', unit:'s', gen:() => ({v0:rnd(10, 30, .5)}), hide:['clock'], probe:'time',
+  story:p => `A ball is thrown straight up from ground level at <b>${n(p.v0)} m/s</b>. How long is it in the air before it returns to the ground?`,
+  motion:p => throwUp(p.v0, 2 * p.v0 / g), ans:p => 2 * p.v0 / g,
+  steps:p => [`Back on the ground, Δy = 0: <span class="m">0 = v₀Δt − ½g(Δt)² = Δt(v₀ − 4.90Δt)</span>`, `<span class="m">Δt = ${n(p.v0)}/4.90 = ${f(2 * p.v0 / g)} s</span>`]},
+{ch:3, name:'Caught on the way down', scene:'catch', sym:'v₀', unit:'m/s', gen:() => ({T:rnd(1, 4, .1)}), hide:[], probe:'throw',
+  story:p => `A ball thrown straight up is caught by the thrower, at the same height, <b>${n(p.T)} s</b> later. With what speed was it thrown?`,
+  motion:(p, v0) => throwUp(v0 == null ? g * p.T / 2 : v0, Math.max(p.T, v0 == null ? 0 : 2 * v0 / g) + .15), ans:p => g * p.T / 2,
+  steps:p => [`Back at the hand, Δy = 0 after Δt = ${n(p.T)} s: <span class="m">0 = v₀Δt − ½g(Δt)²</span>`, `<span class="m">v₀ = ½gΔt = ½(9.80)(${n(p.T)}) = ${f(g * p.T / 2)} m/s</span>`]},
+{ch:3, name:'High jump: peak height', scene:'jump', sym:'y<sub>peak</sub>', unit:'m', gen:jumpGen, hide:['scale'], probe:'height',
+  story:p => `At takeoff a high jumper's center of gravity is <b>${n(p.yi)} m</b> high and moving straight up at <b>${n(p.v0)} m/s</b>. The bar is at <b>${n(p.bar)} m</b>. How high does the center of gravity rise (height above the ground)?`,
+  motion:p => throwUp(p.v0, 2 * p.v0 / g, p.yi), ans:p => p.yi + p.v0 * p.v0 / (2 * g),
+  steps:p => { const dy = p.v0 * p.v0 / (2 * g), y = p.yi + dy; return [`Rise to the peak (v = 0): <span class="m">Δy = v₀²/(2g) = ${n(p.v0)}²/19.6 = ${f(dy)} m</span>`, `<span class="m">y = ${n(p.yi)} + ${f(dy)} = ${f(y)} m</span>`, y >= p.bar ? `That is above the ${n(p.bar)} m bar.` : `That is below the ${n(p.bar)} m bar, so the center of gravity doesn't clear it.`]; }},
+{ch:3, name:'High jump: time to peak', scene:'jump', sym:'Δt', unit:'s', gen:jumpGen, hide:['clock'], probe:'time',
+  story:p => `At takeoff a high jumper's center of gravity is <b>${n(p.yi)} m</b> high and moving straight up at <b>${n(p.v0)} m/s</b>. How long after takeoff does it reach its peak?`,
+  motion:p => throwUp(p.v0, 2 * p.v0 / g, p.yi), ans:p => p.v0 / g,
+  steps:p => [`At the peak v = 0: <span class="m">0 = v₀ − gΔt</span>`, `<span class="m">Δt = ${n(p.v0)}/9.80 = ${f(p.v0 / g)} s</span>`, `The acceleration the whole time after takeoff is −9.80 m/s²: only gravity acts.`]},
+];
+// braking with the student's acceleration: stops short, exactly at, or hits the deer
+function brakeWith(p, a){
+  if (!(a < 0)) a = -1e-6;
+  const stop = p.v0 * p.v0 / (-2 * a), reach = p.D - .4;
+  if (stop <= reach) return stopping(p.v0, a);
+  const th = (p.v0 - Math.sqrt(Math.max(0, p.v0 * p.v0 + 2 * a * reach))) / -a;   // time to reach the deer
+  return {dur:th + .4, s:t => t < th ? p.v0 * t + .5 * a * t * t : reach, v:t => t < th ? p.v0 + a * t : 0, hit:true, th};
+}
+const CODES = QS.map((q, i) => `${q.ch + 1}.${i - QS.findIndex(x => x.ch === q.ch) + 1}`);
+
+/* ---------- link settings ---------- */
+const URLQ = new URLSearchParams(location.search);
+const LINK = (() => {
+  const raw = (URLQ.get('level') || '').trim(); if (!raw) return null;
+  let i = CODES.indexOf(raw); if (i < 0 && /^\d+$/.test(raw)) i = +raw - 1;
+  if (!QS[i]) return null;
+  const p = QS[i].gen(); for (const k of Object.keys(p)){ if (k === 'level') continue; const v = parseFloat(URLQ.get(k)); if (isFinite(v)) p[k] = v; }
+  return {i, p};
+})();
+const MODE = (URLQ.get('mode') || '').toLowerCase();
+const LOCK = !!LINK, TEST = LOCK && MODE === 'test', SHOW = LOCK && MODE === 'show', SOLN = LOCK && MODE === 'solution', BARE = TEST || SHOW || SOLN;
+const NOSOL = URLQ.get('solution') === '0';
+const STU = parseFloat(URLQ.get('launch')), HAS_STU = SHOW && isFinite(STU);
+if (LOCK) $('app').classList.add('locked');
+if (BARE){ document.documentElement.classList.add('bare'); $('app').classList.add('bare'); }
+if (SHOW || SOLN){ $('scene').style.cursor = 'pointer'; $('scene').title = 'Tap to replay'; }
+if (LOCK){ $('btnFresh').hidden = true; $('btnNext').hidden = true; }
+if (NOSOL) $('btnSolve').hidden = true;
+const store = {
+  get(k, d){ if (LOCK) return d; try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v ?? d; } catch (e) { return d; } },
+  set(k, v){ if (LOCK) return; try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+let done = store.get('kinematics-done', {});
+
+/* ---------- state ---------- */
+const S = {cur:0, p:null, t:0, run:false, mo:null, stuMo:null, stu:null, reveal:false, phase:'given', banner:null, msg:'', msgOk:false, tries:0, helped:false, ghosts:[]};
+const q = () => QS[S.cur];
+const cv = $('scene'), ctx = cv.getContext('2d');
+let W = 760, H = 470;
+const hidden = what => !S.reveal && q().hide.includes(what);
+
+/* ---------- drawing helpers ---------- */
+function label(s, x, y, color, size = 13, align = 'center'){
+  if (!s) return;
+  ctx.font = `600 ${size}px "IBM Plex Mono", Menlo, monospace`; ctx.textAlign = align;
+  const w = ctx.measureText(s).width, lx = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+  ctx.fillStyle = 'rgba(10,14,20,.82)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(lx - 4, y - size + 1, w + 8, size + 6, 3) : ctx.rect(lx - 4, y - size + 1, w + 8, size + 6); ctx.fill();
+  ctx.fillStyle = color; ctx.fillText(s, x, y);
+}
+const seeded = n0 => { let s = n0; return () => { s = (s * 16807) % 2147483647; return s / 2147483647; }; };
+function sky(top, bot, stars){
+  const gr = ctx.createLinearGradient(0, 0, 0, bot); gr.addColorStop(0, top[0]); gr.addColorStop(1, top[1]); ctx.fillStyle = gr; ctx.fillRect(0, 0, W, bot);
+  if (stars){ const r = seeded(11); for (let i = 0; i < 90; i++){ ctx.fillStyle = `rgba(255,255,255,${.3 + r() * .6})`; ctx.fillRect(r() * W, r() * bot * .7, 1.4, 1.4); } }
+}
+function hills(base, color, amp, seed){ const r = seeded(seed), ph = r() * 9; ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(0, base); for (let x = 0; x <= W; x += 8) ctx.lineTo(x, base - amp * (.6 + .4 * Math.sin(x / 90 + ph) + .2 * Math.sin(x / 31 + ph * 2))); ctx.lineTo(W, base); ctx.closePath(); ctx.fill(); }
+function tree(x, y, s){ ctx.fillStyle = '#4a3523'; ctx.fillRect(x - 3 * s, y - 18 * s, 6 * s, 18 * s); ctx.fillStyle = '#2f6b45'; ctx.beginPath(); ctx.arc(x, y - 30 * s, 16 * s, 0, 7); ctx.fill(); ctx.fillStyle = '#3b8156'; ctx.beginPath(); ctx.arc(x - 6 * s, y - 34 * s, 10 * s, 0, 7); ctx.fill(); }
+function car(x, y, s, color = '#d9452b', lights){
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  if (lights){ const bm = ctx.createLinearGradient(30, -14, 260, -14); bm.addColorStop(0, 'rgba(255,240,180,.55)'); bm.addColorStop(1, 'rgba(255,240,180,0)'); ctx.fillStyle = bm; ctx.beginPath(); ctx.moveTo(28, -16); ctx.lineTo(260, -40); ctx.lineTo(260, 6); ctx.closePath(); ctx.fill(); }
+  ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(-34, -8); ctx.lineTo(-30, -20); ctx.lineTo(-14, -21); ctx.lineTo(-6, -33); ctx.lineTo(14, -33); ctx.lineTo(24, -21); ctx.lineTo(34, -18); ctx.lineTo(36, -8); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#bfe2f0'; ctx.beginPath(); ctx.moveTo(-4, -30); ctx.lineTo(4, -30); ctx.lineTo(4, -22); ctx.lineTo(-11, -22); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(7, -30); ctx.lineTo(13, -30); ctx.lineTo(20, -22); ctx.lineTo(7, -22); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ffe9a8'; ctx.fillRect(31, -17, 5, 4);
+  for (const wx of [-20, 21]){ ctx.fillStyle = '#15191e'; ctx.beginPath(); ctx.arc(wx, -7, 7.5, 0, 7); ctx.fill(); ctx.fillStyle = '#9aa7b4'; ctx.beginPath(); ctx.arc(wx, -7, 3.5, 0, 7); ctx.fill(); }
+  ctx.restore();
+}
+function person(x, y, s, phase, color = '#ff8a2a', pose){
+  // a simple runner/thrower figure standing on y; phase animates the legs and arms
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineCap = 'round'; ctx.lineWidth = 4;
+  const sw = Math.sin(phase) * (pose === 'stand' ? 0 : .7);
+  ctx.beginPath(); ctx.arc(0, -46, 5.5, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(0, -40); ctx.lineTo(pose === 'stand' ? 0 : 3, -22); ctx.stroke();
+  for (const k of [1, -1]){ const a = sw * k; ctx.beginPath(); ctx.moveTo(pose === 'stand' ? 0 : 3, -22); ctx.lineTo(3 + Math.sin(a) * 12, -11); ctx.lineTo(3 + Math.sin(a) * 12 - (pose === 'stand' ? 0 : 4) * (k > 0 ? 1 : 0), 0); ctx.stroke(); }
+  if (pose === 'throw'){ ctx.beginPath(); ctx.moveTo(0, -36); ctx.lineTo(5, -48); ctx.lineTo(8, -60); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, -36); ctx.lineTo(-8, -26); ctx.stroke(); }
+  else for (const k of [1, -1]){ const a = -sw * k; ctx.beginPath(); ctx.moveTo(1, -36); ctx.lineTo(1 + Math.sin(a) * 10, -27); ctx.lineTo(1 + Math.sin(a) * 10 + 5, -31); ctx.stroke(); }
+  ctx.restore();
+}
+function flag(x, y, color, text){ ctx.strokeStyle = '#eaf0f4'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - 46); ctx.stroke(); ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(x, y - 46); ctx.lineTo(x + 20, y - 39); ctx.lineTo(x, y - 32); ctx.fill(); if (text) label(text, x, y - 52, color, 12); }
+function dial(cx, cy, r, val, max, title, hide, ghost, ghostCol = '#ff8a2a', unit = 'm/s'){
+  ctx.fillStyle = 'rgba(10,14,20,.85)'; ctx.beginPath(); ctx.arc(cx, cy, r + 6, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#5c6b7a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI * .75, Math.PI * 2.25); ctx.stroke();
+  const ang = v => Math.PI * .75 + clamp(v / max, 0, 1.05) * Math.PI * 1.5;
+  ctx.font = '600 9px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#8796a5';
+  for (let k = 0; k <= 4; k++){ const v = max * k / 4, a = ang(v); ctx.strokeStyle = '#8796a5'; ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * (r - 5), cy + Math.sin(a) * (r - 5)); ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); ctx.stroke(); if (!hide) ctx.fillText(+v.toPrecision(3), cx + Math.cos(a) * (r - 14), cy + Math.sin(a) * (r - 14) + 3); }
+  if (ghost != null){ const a = ang(ghost); ctx.strokeStyle = ghostCol; ctx.lineWidth = 3; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * (r - 4), cy + Math.sin(a) * (r - 4)); ctx.stroke(); ctx.setLineDash([]); }
+  const a = ang(val); ctx.strokeStyle = '#ff5b45'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * (r - 4), cy + Math.sin(a) * (r - 4)); ctx.stroke();
+  ctx.fillStyle = '#eaf0f4'; ctx.beginPath(); ctx.arc(cx, cy, 3.5, 0, 7); ctx.fill();
+  ctx.font = '600 12px "IBM Plex Mono", Menlo, monospace'; const vt = hide ? `speed •• ${unit}` : `speed ${f(Math.abs(val))} ${unit}`; ctx.fillStyle = 'rgba(10,14,20,.85)'; const vw = ctx.measureText(vt).width; ctx.fillRect(cx - vw / 2 - 5, cy + r + 8, vw + 10, 18); ctx.fillStyle = '#eaf0f4'; ctx.fillText(vt, cx, cy + r + 21);
+}
+function stopwatch(cx, cy, r, t, hide, ghostT){
+  ctx.fillStyle = 'rgba(10,14,20,.85)'; ctx.beginPath(); ctx.arc(cx, cy, r + 6, 0, 7); ctx.fill();
+  ctx.fillStyle = '#e9eef3'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill(); ctx.fillStyle = '#5c6b7a'; ctx.fillRect(cx - 4, cy - r - 9, 8, 6);
+  ctx.strokeStyle = '#20262d'; ctx.lineWidth = 1.2; for (let k = 0; k < 12; k++){ const a = k / 12 * Math.PI * 2; ctx.beginPath(); ctx.moveTo(cx + Math.sin(a) * (r - 2), cy - Math.cos(a) * (r - 2)); ctx.lineTo(cx + Math.sin(a) * (r - 6), cy - Math.cos(a) * (r - 6)); ctx.stroke(); }
+  const hand = (tt, col, dash) => { const a = (tt % 1) * Math.PI * 2; ctx.strokeStyle = col; ctx.lineWidth = 2.2; if (dash) ctx.setLineDash([3, 2]); ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.sin(a) * (r - 5), cy - Math.cos(a) * (r - 5)); ctx.stroke(); ctx.setLineDash([]); };
+  if (ghostT != null) hand(ghostT, '#ff8a2a', true);
+  hand(t, '#d9452b');
+  ctx.font = '600 12px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#eaf0f4'; ctx.fillText(hide ? 't = •.•• s' : `t = ${t.toFixed(2)} s`, cx, cy + r + 20);
+}
+
+/* ---------- the scenes ---------- */
+// horizontal scenes map metres along the ground to pixels; vertical ones map height
+function hView(xmax){ const x0 = 70, x1 = W - 40; return x => x0 + x / xmax * (x1 - x0); }
+function vView(ymax, ground){ const top = 70; return y => ground - y / ymax * (ground - top); }
+function paint(){
+  const Q = q(), p = S.p, mo = S.stuMo || S.mo, t = S.t, gy = Math.round(H * .74);
+  ctx.clearRect(0, 0, W, H);
+  const sc = Q.scene, horiz = !['ball', 'catch', 'jump'].includes(sc);
+  let X, Y, objPx;
+  if (horiz){
+    // how far the scene must show
+    const ends = [S.mo.s(S.mo.dur) * 1.0]; if (S.stuMo) ends.push(S.stuMo.s(S.stuMo.dur)); if (p.D) ends.push(p.D); if (Q.finish) ends.push(Q.finish(p));
+    if (S.stu != null && (Q.probe === 'dist')) ends.push(S.stu); if (S.stu != null && Q.probe === 'gap') ends.push(p.D - S.stu);
+    const xmax = Math.max(...ends.filter(isFinite), 1) * 1.15; X = hView(xmax);
+    if (sc === 'deer') { sky(['#060c22', '#1b2a4d'], gy, true); hills(gy - 30, '#101a2a', 40, 3); }
+    else if (sc === 'ice') { ctx.fillStyle = '#2b3a4c'; ctx.fillRect(0, 0, W, gy - 40); ctx.fillStyle = '#3a4b60'; for (let k = 0; k < 9; k++) ctx.fillRect(k * W / 9 + 6, 70, W / 9 - 12, gy - 130); ctx.fillStyle = '#e9f1f7'; ctx.fillRect(0, gy - 40, W, 8); }
+    else { sky(['#5aa3e0', '#cfe8f5'], gy, false); hills(gy - 20, '#8fb59a', 34, 5); const r = seeded(4); for (let k = 0; k < 7; k++) tree(r() * W, gy - 26, .7 + r() * .4); }
+    // ground strip
+    if (sc === 'track'){ ctx.fillStyle = '#b5482f'; ctx.fillRect(0, gy - 26, W, 44); ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 2; for (const yy of [gy - 26, gy - 4, gy + 18]){ ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(W, yy); ctx.stroke(); } ctx.fillStyle = '#3f7d4a'; ctx.fillRect(0, gy + 18, W, H - gy); }
+    else if (sc === 'ice'){ ctx.fillStyle = '#eef5fa'; ctx.fillRect(0, gy - 32, W, H - gy + 32); ctx.fillStyle = '#c8302c'; ctx.fillRect(X(0) - 2, gy - 32, 4, H); ctx.fillStyle = '#2c5fb8'; ctx.fillRect(X(p.D * .45) - 4, gy - 32, 8, H); ctx.fillStyle = '#c8302c'; ctx.fillRect(X(p.D) - 2, gy - 32, 4, H); }
+    else { ctx.fillStyle = sc === 'deer' ? '#1f2329' : '#3b4047'; ctx.fillRect(0, gy - 24, W, 40); ctx.fillStyle = sc === 'deer' ? '#c9b25a' : '#f2d36b'; for (let x = 0; x < W; x += 46) ctx.fillRect(x, gy - 6, 24, 3); ctx.fillStyle = sc === 'deer' ? '#16231a' : '#4f8a4f'; ctx.fillRect(0, gy + 16, W, H - gy); }
+    // distance markers along the ground
+    const xmaxW = (W - 40 - 70) / (X(1) - X(0));
+    let step = 1; for (const s2 of [1, 2, 5, 10, 20, 50]){ step = s2; if (X(s2) - X(0) >= 52) break; }
+    ctx.font = '600 11px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'center';
+    for (let m = 0; m <= xmaxW + 1e-9; m += step){ const xx = X(m); ctx.fillStyle = sc === 'deer' ? '#5c6b7a' : '#eaf0f4'; ctx.fillRect(xx - 1.5, gy + 18, 3, 9); if (!hidden('scale')){ ctx.fillStyle = sc === 'ice' ? '#20262d' : '#eaf0f4'; ctx.fillText(`${m} m`, xx, gy + 40); } }
+    if (hidden('scale')) label('distance markers hidden', W / 2, gy + 42, '#a9b6c2', 11);
+    // fixed things in the scene
+    if (sc === 'deer'){ const dx = X(p.D) + 14; ctx.save(); ctx.translate(dx, gy - 12); ctx.fillStyle = '#9a6a3c'; ctx.fillRect(-14, -26, 30, 14); ctx.fillRect(-12, -12, 4, 14); ctx.fillRect(10, -12, 4, 14); ctx.fillRect(12, -40, 6, 16); ctx.beginPath(); ctx.ellipse(18, -42, 8, 5, 0, 0, 7); ctx.fill(); ctx.strokeStyle = '#d8c4a0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(16, -46); ctx.lineTo(12, -58); ctx.lineTo(8, -62); ctx.moveTo(13, -54); ctx.lineTo(18, -60); ctx.stroke(); ctx.fillStyle = '#ffffff'; ctx.fillRect(22, -44, 2, 2); ctx.restore();
+      ctx.strokeStyle = 'rgba(234,240,244,.8)'; ctx.lineWidth = 1.5; const dy = gy + 56; ctx.beginPath(); ctx.moveTo(X(0), dy); ctx.lineTo(X(p.D), dy); ctx.moveTo(X(0), dy - 5); ctx.lineTo(X(0), dy + 5); ctx.moveTo(X(p.D), dy - 5); ctx.lineTo(X(p.D), dy + 5); ctx.stroke(); label(`${p.D} m to the deer`, (X(0) + X(p.D)) / 2, dy + 5, '#eaf0f4', 12); }
+    if (sc === 'ice'){ const gx = X(p.D); ctx.strokeStyle = '#c8302c'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(gx, gy - 6); ctx.lineTo(gx, gy - 52); ctx.lineTo(gx + 34, gy - 52); ctx.lineTo(gx + 40, gy - 6); ctx.stroke(); ctx.strokeStyle = 'rgba(220,226,232,.6)'; ctx.lineWidth = 1; for (let k = 0; k < 7; k++){ ctx.beginPath(); ctx.moveTo(gx + k * 5.5, gy - 52); ctx.lineTo(gx + 6 + k * 5, gy - 6); ctx.stroke(); } label(`goal: ${p.D} m`, gx + 18, gy - 60, '#eaf0f4', 12); }
+    if (Q.finish){ const fx = X(Q.finish(p)); ctx.fillStyle = '#eaf0f4'; for (let k = 0; k < 6; k++){ ctx.fillStyle = k % 2 ? '#20262d' : '#eaf0f4'; ctx.fillRect(fx - 3, gy - 26 + k * 7.4, 6, 7.4); } label(`${Q.finish(p)} m mark`, fx, gy - 34, '#eaf0f4', 12); }
+    // ghost images, then the moving object
+    const drawObj = (x, alpha, tt, col) => {
+      ctx.save(); ctx.globalAlpha = alpha;
+      if (sc === 'track') person(X(x), gy - 14, 1.1, tt * 9, col);
+      else if (sc === 'ice'){ ctx.fillStyle = col === '#ff8a2a' ? '#ff8a2a' : '#111'; ctx.beginPath(); ctx.ellipse(X(x), gy - 14, 9, 3.5, 0, 0, 7); ctx.fill(); }
+      else car(X(x) - 30, gy - 8, 1, col === '#ff8a2a' ? '#ff8a2a' : sc === 'deer' ? '#e6e9ec' : '#d9452b', sc === 'deer' && alpha > .9);
+      ctx.restore();
+    };
+    const gap = mo.dur / 8; for (let k = 1; k * gap < t - 1e-6; k++) drawObj(mo.s(k * gap), .2, k * gap, '#fff');
+    objPx = X(mo.s(t));
+    drawObj(mo.s(t), 1, t, '#fff');
+    // the student's prediction
+    if (S.stu != null && S.phase !== 'run1'){
+      if (Q.probe === 'dist') flag(X(S.stu), gy - 4, '#ff8a2a', 'your Δx');
+      if (Q.probe === 'gap') flag(X(p.D - S.stu), gy - 4, '#ff8a2a', 'your stop');
+      if (Q.probe === 'time' && S.stu >= 0) drawObj(S.mo.s(Math.min(S.stu, S.mo.dur)), .55, S.stu, '#ff8a2a');
+    }
+    if (S.reveal && S.phase === 'done'){
+      const end = S.mo.s(S.mo.dur), a = Q.ans(p);
+      if (Q.probe === 'dist') flag(X(a), gy - 4, '#7dffc1', `Δx = ${f(a)} m`);
+      if (Q.probe === 'gap') label(`d = ${f(a)} m`, (X(end) + X(p.D)) / 2, gy - 70, '#7dffc1', 13);
+    }
+    if (mo.hit && t >= mo.th) label('hits the deer!', X(mo.s(t)), gy - 80, '#ff8b7a', 14);
+  } else {
+    // vertical scenes: ball, catch, high jump
+    const peak = Math.max(S.mo.s(S.mo.dur / 2), S.stuMo ? S.stuMo.s(S.stuMo.dur / 2) : 0, sc === 'jump' ? p.bar : 0, S.stu != null && Q.probe === 'height' ? S.stu : 0, sc === 'ball' || sc === 'catch' ? 1.5 : 0);
+    const ymax = Math.max(peak * 1.18, 2.4); Y = vView(ymax, gy);
+    sky(['#4d93d6', '#d6ecf7'], gy, false); hills(gy - 10, '#93b89c', 26, 8);
+    ctx.fillStyle = sc === 'jump' ? '#b5482f' : '#5b8f4f'; ctx.fillRect(0, gy, W, H - gy);
+    // a height pole with markings
+    const px = W * .3; ctx.fillStyle = '#e9eef3'; ctx.fillRect(px - 3, Y(ymax * .98), 6, gy - Y(ymax * .98));
+    let step = .5; for (const s2 of [.25, .5, 1, 2, 5, 10]){ step = s2; if (Y(0) - Y(s2) >= 34) break; }
+    ctx.font = '600 11px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'right';
+    for (let m = 0; m <= ymax * .98 + 1e-9; m += step){ ctx.fillStyle = '#20262d'; ctx.fillRect(px - 8, Y(m) - 1, 16, 2); if (!hidden('scale')){ ctx.fillStyle = '#20262d'; ctx.fillText(`${+m.toFixed(2)} m`, px - 12, Y(m) + 4); } }
+    if (hidden('scale')) label('height markings hidden', px, gy + 26, '#a9b6c2', 11);
+    const bx = W * .58;
+    if (sc === 'jump'){
+      // standards, bar and landing mat
+      for (const sx of [bx - 70, bx + 70]){ ctx.fillStyle = '#c3ccd5'; ctx.fillRect(sx - 3, Y(p.bar + .4), 6, gy - Y(p.bar + .4)); }
+      ctx.fillStyle = '#ffd25e'; ctx.fillRect(bx - 70, Y(p.bar) - 3, 140, 6); label(`bar ${n(p.bar)} m`, bx + 78, Y(p.bar) + 5, '#ffd25e', 12, 'left');
+      ctx.fillStyle = '#2c5fb8'; ctx.fillRect(bx - 60, gy - 24, 180, 24);
+      const y = (S.stuMo || S.mo).s(t), cy = Y(y);
+      // the jumper's body around the center of gravity, arching over the bar near the top
+      ctx.save(); ctx.translate(bx, cy); const arch = clamp(1 - Math.abs((S.mo.v(t)) / p.v0), 0, 1);
+      ctx.strokeStyle = '#ff8a2a'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-26, -8 * arch + 14 * (1 - arch)); ctx.quadraticCurveTo(0, -18 * arch - 6, 26, -8 * arch + 14 * (1 - arch)); ctx.stroke();
+      ctx.fillStyle = '#ff8a2a'; ctx.beginPath(); ctx.arc(-30, -12 * arch + 12 * (1 - arch), 6, 0, 7); ctx.fill();
+      ctx.fillStyle = '#eaf0f4'; ctx.strokeStyle = '#20262d'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, 5, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#20262d'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 5, 0, Math.PI / 2); ctx.fill(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 5, Math.PI, Math.PI * 1.5); ctx.fill();
+      ctx.restore(); label('center of gravity', bx - 40, cy + 22, '#eaf0f4', 10, 'right');
+      objPx = cy;
+    } else {
+      person(bx - 44, gy, 1.2, 0, '#ff8a2a', 'stand');
+      const handY = 1.5 * 0;   // the ball leaves and returns at hand height, drawn at the ground line for simplicity
+      const mo2 = S.stuMo || S.mo, gap = mo2.dur / 10;
+      for (let k = 1; k * gap < t - 1e-6; k++){ ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.beginPath(); ctx.arc(bx - 12 + (k % 2 ? 7 : 0), Y(Math.max(0, mo2.s(k * gap))) - 8, 7, 0, 7); ctx.fill(); }
+      const y = Math.max(handY, mo2.s(Math.min(t, mo2.dur)));
+      const by = Y(y) - 8; const gr2 = ctx.createRadialGradient(bx - 14, by - 3, 1, bx - 12, by, 8); gr2.addColorStop(0, '#fff'); gr2.addColorStop(1, '#e0322a'); ctx.fillStyle = gr2; ctx.beginPath(); ctx.arc(bx - 12, by, 8, 0, 7); ctx.fill();
+      objPx = by;
+      if (sc === 'catch'){ label(`caught at ${n(p.T)} s`, bx + 30, gy - 92, '#eaf0f4', 12, 'left'); }
+    }
+    // predictions and answers
+    if (S.stu != null && S.phase !== 'run1'){
+      if (Q.probe === 'height'){ const yy = Y(S.stu); ctx.strokeStyle = '#ff8a2a'; ctx.lineWidth = 2.5; ctx.setLineDash([8, 5]); ctx.beginPath(); ctx.moveTo(px, yy); ctx.lineTo(W - 20, yy); ctx.stroke(); ctx.setLineDash([]); label('your height', W - 24, yy - 7, '#ff8a2a', 12, 'right'); }
+      if (Q.probe === 'time' && S.stu >= 0){ const yy = S.mo.s(Math.min(S.stu, S.mo.dur)), cy = sc === 'jump' ? Y(yy) : Y(Math.max(0, yy)) - 8; ctx.strokeStyle = '#ff8a2a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(bx + (sc === 'jump' ? 0 : -12), cy, 11, 0, 7); ctx.stroke(); label('at your time', bx + 20, cy + 4, '#ff8a2a', 11, 'left'); }
+    }
+    if (S.reveal && S.phase === 'done' && Q.probe === 'height'){ const a = Q.ans(p), yy = Y(a); ctx.strokeStyle = '#7dffc1'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px, yy); ctx.lineTo(W - 20, yy); ctx.stroke(); label(`${Q.sym.replace(/<[^>]+>/g, '')} = ${f(a)} m`, px + 10, yy + 18, '#7dffc1', 12, 'left'); }
+  }
+  /* --- instruments --- */
+  const mo3 = S.stuMo || S.mo, vNow = mo3.v(Math.min(t, mo3.dur));
+  const vmax = Math.max(Math.abs(S.mo.v(0)), Math.abs(S.mo.v(S.mo.dur)), S.stu != null && Q.probe === 'speed' ? Math.abs(S.stu) : 0, 1) * 1.25;
+  const showGhostV = S.stu != null && Q.probe === 'speed' && S.phase !== 'run1';
+  const low = !horiz;   // vertical scenes keep the instruments on the ground, out of the way of the heights
+  dial(W - 62, low ? gy + 46 : 92, low ? 30 : 40, Math.abs(vNow), vmax, 'speed', hidden('speed'), showGhostV ? Math.abs(S.stu) : null);
+  stopwatch(W - (low ? 150 : 158), low ? gy + 44 : 88, low ? 24 : 30, t, hidden('clock'), S.stu != null && Q.probe === 'time' && S.phase !== 'run1' ? S.stu : null);
+  if (Q.scene === 'ice'){ const left = Math.max(0, p.t - t); label(`CLOCK ${left.toFixed(2)}`, W / 2, 30, left > 0 ? '#ffd25e' : '#ff5b45', 15); if (left <= 0 && Q === QS[CODES.indexOf('3.3')]) label(S.mo.s(p.t) >= p.D ? 'GOAL before the buzzer!' : 'buzzer: no goal', W / 2, 54, '#eaf0f4', 13); }
+  /* --- labels --- */
+  ctx.font = '600 14px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'left';
+  const nm = Q.name, nw = ctx.measureText(nm).width; ctx.fillStyle = 'rgba(10,14,20,.8)'; ctx.fillRect(8, 8, nw + 20, 28); ctx.fillStyle = '#7dffc1'; ctx.fillText(nm, 18, 27);
+  const tag = SHOW ? (HAS_STU && S.phase !== 'run1' && S.phase !== 'given' ? `Your answer: ${f(STU)} ${Q.unit}` : '') : SOLN ? `Answer: ${Q.sym.replace(/<[^>]+>/g, '')} = ${f(Q.ans(p))} ${Q.unit}` : '';
+  if (tag){ ctx.font = '600 13px "IBM Plex Mono", Menlo, monospace'; const tw = ctx.measureText(tag).width; ctx.fillStyle = 'rgba(10,14,20,.82)'; ctx.fillRect(8, 40, tw + 20, 26); ctx.fillStyle = tag.startsWith('Your') ? '#ffb46b' : '#7dffc1'; ctx.fillText(tag, 18, 58); }
+  if (S.msg){ ctx.font = '600 14px "IBM Plex Sans", system-ui, sans-serif'; const mw = ctx.measureText(S.msg).width; ctx.fillStyle = 'rgba(10,14,20,.88)'; ctx.fillRect(8, 70, mw + 20, 26); ctx.fillStyle = S.msgOk ? '#7dffc1' : '#ff8b7a'; ctx.fillText(S.msg, 18, 88); }
+  if ((SHOW || SOLN) && !S.run && S.phase === 'done'){ ctx.font = '600 12px "IBM Plex Mono", Menlo, monospace'; const h2 = 'Tap to replay', hw = ctx.measureText(h2).width; ctx.fillStyle = 'rgba(10,14,20,.75)'; ctx.fillRect(W / 2 - hw / 2 - 9, H - 30, hw + 18, 22); ctx.fillStyle = '#eaf0f4'; ctx.textAlign = 'center'; ctx.fillText(h2, W / 2, H - 15); }
+  if (S.banner){ const size = clamp(W / 13, 22, 48), a = reduceMotion ? 1 : clamp((S.banner.until - performance.now()) / 500, 0, 1); ctx.globalAlpha = a; ctx.font = `400 ${size}px "Saira Stencil One", Impact, sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(8,12,18,.85)'; ctx.lineJoin = 'round'; ctx.strokeText(S.banner.text, W / 2, H * .42); ctx.fillStyle = S.banner.c; ctx.fillText(S.banner.text, W / 2, H * .42); ctx.globalAlpha = 1; }
+}
+
+/* ---------- running ---------- */
+const sleep = ms => new Promise(r => setTimeout(r, reduceMotion ? 0 : ms));
+function play(mo){
+  return new Promise(res => {
+    S.t = 0; S.run = true;
+    if (reduceMotion){ S.t = mo.dur; S.run = false; paint(); return res(); }
+    const speed = mo.dur > 6 ? mo.dur / 6 : 1, t0 = performance.now();   // long motions are sped up to about 6 s
+    const step = now => { S.t = Math.min(mo.dur, (now - t0) / 1000 * speed); paint(); if (S.t < mo.dur) requestAnimationFrame(step); else { S.run = false; paint(); res(); } };
+    requestAnimationFrame(step);
+  });
+}
+function bannerLoop(){ const tick = () => { paint(); if (S.banner && performance.now() < S.banner.until) requestAnimationFrame(tick); else { S.banner = null; paint(); } }; requestAnimationFrame(tick); }
+function judge(val){ const a = q().ans(S.p), ok = Math.abs(val - a) <= .02 * Math.abs(a) + 1e-9; return {ok, word:ok ? '' : (val > a ? 'Your answer is too large.' : 'Your answer is too small.')}; }
+async function studentPhase(val){
+  const Q = q(); S.stu = val; S.phase = 'yours';
+  if (Q.probe === 'brake' || Q.probe === 'throw'){ S.stuMo = Q.motion(S.p, val); await play(S.stuMo); }
+  else paint();
+  const j = judge(val);
+  S.banner = {text:j.ok ? 'CORRECT' : 'NOT QUITE', c:j.ok ? '#7dffc1' : '#ff8b7a', until:performance.now() + 1700};
+  S.msg = j.word; S.msgOk = j.ok;
+  if (!j.ok && Q.probe === 'brake') S.msg = S.stuMo.hit ? 'Too gentle: the car hits the deer.' : 'Too hard: the car stops short of the deer.';
+  if (!j.ok && Q.probe === 'throw') S.msg = val > Q.ans(S.p) ? 'Too fast: the ball comes back late.' : 'Too slow: the ball comes back early.';
+  bannerLoop(); return j;
+}
+
+/* ---------- question flow ---------- */
+function loadQ(i, fresh = true){
+  S.cur = i; if (fresh) S.p = q().gen();
+  Object.assign(S, {t:0, run:false, stuMo:null, stu:null, reveal:false, phase:'given', banner:null, msg:'', tries:0, helped:false});
+  const Q = q(); S.mo = Q.motion(S.p);
+  $('tag').textContent = `Question ${CODES[i]} · ${CHAPTERS[Q.ch]}`;
+  $('qName').textContent = Q.name; $('story').innerHTML = Q.story(S.p);
+  $('ansLabel').innerHTML = Q.sym + ' ='; $('ansUnit').textContent = Q.unit; $('ans').value = ''; $('note').textContent = NOTE;
+  $('errMsg').hidden = true; $('debrief').hidden = true;
+  store.set('kinematics-cur', i);
+  cv.setAttribute('aria-label', `${Q.name}. ${Q.story(S.p).replace(/<[^>]+>/g, '')}`);
+  renderNav(); paint();
+}
+function renderNav(){
+  const nav = $('nav'); nav.textContent = '';
+  CHAPTERS.forEach((c, ci) => {
+    const g2 = document.createElement('div'); g2.className = 'group';
+    const lab = document.createElement('span'); lab.textContent = c; g2.append(lab);
+    QS.forEach((Q, i) => { if (Q.ch !== ci) return; const b = document.createElement('button'); b.type = 'button'; b.className = 'lv' + (i === S.cur ? ' cur' : '') + (done[i] ? ' done' : ''); b.textContent = CODES[i]; b.setAttribute('aria-label', `Question ${CODES[i]}, ${Q.name}${done[i] ? ', solved' : ''}`); b.onclick = () => { if (!S.run) loadQ(i); }; g2.append(b); });
+    nav.append(g2);
+  });
+  $('total').textContent = `✓ ${Object.keys(done).length} of ${QS.length}`;
+}
+async function fire(){
+  if (S.run || BARE) return;
+  const val = parseFloat($('ans').value.trim().replace('−', '-').replace(',', '.'));
+  if (!isFinite(val)){ $('errMsg').textContent = 'Enter a number.'; $('errMsg').hidden = false; return; }
+  $('errMsg').hidden = true; $('debrief').hidden = true; $('btnGo').disabled = true; S.tries++;
+  S.stu = null; S.stuMo = null; S.msg = ''; S.phase = 'run1'; await play(S.mo); await sleep(300);
+  const j = await studentPhase(val); S.phase = 'done';
+  $('btnGo').disabled = false;
+  const line = $('resultLine');
+  if (j.ok){ line.textContent = S.helped ? 'Correct, using the worked solution.' : `Correct on try ${S.tries}.`; line.className = 'result hit'; if (!S.helped){ done[S.cur] = 1; store.set('kinematics-done', done); } if (!NOSOL) showSteps(); $('btnNext').hidden = LOCK || S.cur >= QS.length - 1; }
+  else { line.textContent = S.msg; line.className = 'result miss'; $('btnSolve').hidden = S.helped || NOSOL; $('btnNext').hidden = true; if (!S.helped) $('stepsBox').hidden = true; }
+  $('debrief').hidden = false; renderNav(); paint();
+  $('debrief').scrollIntoView({block:'nearest', behavior:reduceMotion ? 'auto' : 'smooth'});
+}
+function showSteps(){ $('steps').innerHTML = q().steps(S.p).map(s => `<li>${s}</li>`).join(''); $('stepsBox').hidden = false; $('btnSolve').hidden = true; }
+$('form').addEventListener('submit', e => { e.preventDefault(); $('ans').blur(); fire(); });
+$('btnSolve').onclick = () => { if (NOSOL) return; S.helped = true; showSteps(); };
+$('btnFresh').onclick = () => { if (!LOCK && !S.run) loadQ(S.cur); };
+$('btnNext').onclick = () => { if (!LOCK && !S.run) loadQ(S.cur + 1); };
+
+async function playShow(){
+  if (S.run) return;
+  S.stu = null; S.stuMo = null; S.msg = ''; S.phase = 'run1';
+  await play(S.mo);
+  if (HAS_STU){ await sleep(600); await studentPhase(STU); }
+  S.phase = 'done'; paint();
+}
+async function playSolution(){
+  if (S.run) return;
+  S.reveal = true; S.stuMo = null; S.phase = 'run1'; await play(S.mo); S.phase = 'done'; paint();
+}
+
+function resize(){
+  const box = $('range'), wide = innerWidth > 900 && !BARE;
+  const aw = box.clientWidth, nW = Math.floor(aw), nH = Math.floor(wide ? Math.min(box.clientHeight, aw * .66) : aw * .62), dpr = devicePixelRatio || 1;
+  if (nW === W && nH === H && cv.width === Math.round(W * dpr)) return;
+  W = nW; H = Math.max(nH, 300); cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (S.mo) paint();
+}
+new ResizeObserver(resize).observe($('range'));
+addEventListener('resize', resize);
+function start(){
+  resize();
+  if (LINK){ S.p = LINK.p; loadQ(LINK.i, false); }
+  else { const cur = store.get('kinematics-cur', 0); loadQ(QS[cur] ? cur : 0); }
+  if (SHOW){ cv.addEventListener('click', playShow); setTimeout(playShow, 900); }
+  if (SOLN){ cv.addEventListener('click', playSolution); setTimeout(playSolution, 700); }
+  if (document.fonts?.ready) document.fonts.ready.then(() => paint());
+}
+start();
+})();
+</script>
+</body>
+</html>
