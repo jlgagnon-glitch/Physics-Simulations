@@ -270,8 +270,8 @@ const QS = [
   gen:() => ({v:ri(20, 60), al:ri(15, 75)}),
   story:p => `A racquetball moving at <b>${p.v} m/s</b> hits a wall on its right at <b>${p.al}°</b> to the wall. It rebounds at the same speed and the same ${p.al}° angle to the wall. Find the change in velocity Δv = v<sub>f</sub> − v<sub>i</sub>.`,
   parts:() => polarParts('Δv', 'm/s'), R:'Δv',
-  given:p => [{label:'vi', html:'v<sub>i</sub>', m:p.v, d:270 + p.al}, {label:'vf', html:'v<sub>f</sub>', m:p.v, d:270 - p.al}],
-  chain:p => [{label:'vf', html:'v<sub>f</sub>', m:p.v, d:270 - p.al}, {label:'vi', html:'v<sub>i</sub>', m:p.v, d:270 + p.al, neg:true}]},
+  given:p => [{label:'vi', html:'v<sub>i</sub>', m:p.v, d:270 + p.al, at:[-p.v * Math.sin(p.al * D2R), p.v * Math.cos(p.al * D2R)]}, {label:'vf', html:'v<sub>f</sub>', m:p.v, d:270 - p.al}],
+  chain:p => [{label:'vf', html:'v<sub>f</sub>', m:p.v, d:270 - p.al}, {label:'vi', html:'v<sub>i</sub>', m:p.v, d:270 + p.al, neg:true, at:[-p.v * Math.sin(p.al * D2R), p.v * Math.cos(p.al * D2R)]}]},
 {ch:3, name:'Rounding the corner', kind:'polar', unit:'m/s',
   gen:() => ({v1:rnd(3, 8, .5), v2:rnd(3, 8, .5), af:pick([45, 60, 90, 120, 135])}),
   story:p => `A runner moving <b>east at ${p.v1} m/s</b> rounds a corner and ends up moving at <b>${p.v2} m/s at ${p.af}°</b>. Find the change in velocity Δv = v<sub>f</sub> − v<sub>i</sub>.`,
@@ -324,7 +324,8 @@ const stuVec = vals => q().kind === 'polar' ? (q().noDir ? pol(vals[0], vals[1])
 
 function view(){
   const Q = q(), p = S.p, pts = [[0, 0]], ch = Q.chain(p);
-  for (const it of Q.given(p)) pts.push(rawOf(it));
+  for (const it of Q.given(p)){ const a = it.at || [0, 0]; pts.push(a, sum([a, rawOf(it)])); }
+  const SC = SCENES[CODES[S.cur]]; if (SC && SC.extent) pts.push(...SC.extent(p));
   let acc = [0, 0]; for (const it of ch){ acc = sum([acc, vecOf(it)]); pts.push(acc.slice()); }
   pts.push(Q.target(p));
   if (Q.pre){ let a = [0, 0]; for (const it of Q.given(p)){ a = sum([a, vecOf(it)]); pts.push(a.slice()); } }
@@ -337,6 +338,92 @@ function view(){
   const ox = left + ((W - left - right) - (x1 - x0) * sc) / 2 - x0 * sc, oy = top + ((H - top - bot) - (y1 - y0) * sc) / 2 + y1 * sc;
   return {sc, X:x => ox + x * sc, Y:y => oy - y * sc, x0, x1, y0, y1};
 }
+/* ---------- scenery: drawn under the vectors, in the same world units ---------- */
+function props(V){
+  const X = V.X, Y = V.Y, px = n => n * V.sc;
+  const ln = (a, b, c, w = 2, dash) => { ctx.save(); ctx.strokeStyle = c; ctx.lineWidth = w; if (dash) ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(X(a[0]), Y(a[1])); ctx.lineTo(X(b[0]), Y(b[1])); ctx.stroke(); ctx.restore(); };
+  const D = {X, Y, px, ln,
+    // an angle mark at c from direction a0 to a1 (degrees counterclockwise from +x)
+    arc(c, r, a0, a1, text, color = '#ffd25e', alpha = 1){
+      if (alpha <= .02) return;
+      const x = X(c[0]), y = Y(c[1]); ctx.save(); ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x, y, r, -a0 * D2R, -a1 * D2R, a1 > a0); ctx.stroke();
+      const m = (a0 + a1) / 2 * D2R; if (text) label(text, x + (r + 18) * Math.cos(m), y - (r + 18) * Math.sin(m) + 5, color, 12);
+      ctx.restore();
+    },
+    // a reference line for an angle, e.g. the −x axis for "N of W"
+    ref(c, deg, r, alpha = 1){ if (alpha <= .02) return; ctx.save(); ctx.globalAlpha = alpha * .8; ctx.strokeStyle = '#ffd25e'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); const x = X(c[0]), y = Y(c[1]); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + r * Math.cos(deg * D2R), y - r * Math.sin(deg * D2R)); ctx.stroke(); ctx.restore(); },
+    ground(y, x0, x1, c = '#9aa7b4'){
+      const sy = Y(y), a = X(x0), b = X(x1);
+      ctx.fillStyle = 'rgba(120,96,70,.28)'; ctx.fillRect(a, sy, b - a, 16);
+      ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(a, sy); ctx.lineTo(b, sy); ctx.stroke();
+      ctx.lineWidth = 1.2; for (let x = a + 4; x < b; x += 10){ ctx.beginPath(); ctx.moveTo(x, sy + 2); ctx.lineTo(x - 7, sy + 12); ctx.stroke(); }
+    },
+    wall(x, y0, y1, side = 1){
+      const sx = X(x), a = Y(y1), b = Y(y0);
+      ctx.fillStyle = 'rgba(150,160,175,.22)'; ctx.fillRect(side > 0 ? sx : sx - 18, a, 18, b - a);
+      ctx.strokeStyle = '#c3ccd5'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sx, a); ctx.lineTo(sx, b); ctx.stroke();
+      ctx.lineWidth = 1.2; for (let y = a + 4; y < b; y += 10){ ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx + side * 9, y - 7); ctx.stroke(); }
+    },
+    poly(pts, fill, stroke){ ctx.beginPath(); pts.forEach((q, i) => i ? ctx.lineTo(X(q[0]), Y(q[1])) : ctx.moveTo(X(q[0]), Y(q[1]))); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); if (stroke){ ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); } },
+    ladder(a, b){
+      const x1 = X(a[0]), y1 = Y(a[1]), x2 = X(b[0]), y2 = Y(b[1]), L = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / L, uy = (y2 - y1) / L, nx = -uy * 9, ny = ux * 9;
+      ctx.strokeStyle = '#c99a5b'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+      for (const s of [1, -1]){ ctx.beginPath(); ctx.moveTo(x1 + nx * s, y1 + ny * s); ctx.lineTo(x2 + nx * s, y2 + ny * s); ctx.stroke(); }
+      ctx.lineWidth = 3; for (let d = 16; d < L - 6; d += 22){ ctx.beginPath(); ctx.moveTo(x1 + ux * d + nx, y1 + uy * d + ny); ctx.lineTo(x1 + ux * d - nx, y1 + uy * d - ny); ctx.stroke(); }
+      ctx.lineCap = 'butt';
+    },
+    crate(c, s = 30){ const x = X(c[0]) - s / 2, y = Y(c[1]) - s / 2; ctx.fillStyle = '#a4713c'; ctx.fillRect(x, y, s, s); ctx.strokeStyle = '#6b4520'; ctx.lineWidth = 3; ctx.strokeRect(x, y, s, s); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + s, y + s); ctx.stroke(); },
+    ring(c){ ctx.strokeStyle = '#c3ccd5'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(X(c[0]), Y(c[1]), 11, 0, 7); ctx.stroke(); ctx.strokeStyle = '#59636e'; ctx.lineWidth = 1.5; ctx.stroke(); },
+    flag(c, color = '#ff6a1f', text){ const x = X(c[0]), y = Y(c[1]); ctx.strokeStyle = '#dfe6ec'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - 30); ctx.stroke(); ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(x, y - 30); ctx.lineTo(x + 18, y - 24); ctx.lineTo(x, y - 18); ctx.fill(); if (text) label(text, x, y + 18, '#dfe6ec', 11); },
+    compass(){ const x = 36, y = 112; ctx.strokeStyle = '#a9b6c2'; ctx.fillStyle = '#a9b6c2'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 18, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - 16); ctx.lineTo(x - 5, y); ctx.lineTo(x + 5, y); ctx.closePath(); ctx.fill(); ctx.font = '700 11px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText('N', x, y - 22); ctx.fillText('E', x + 26, y + 4); ctx.fillText('W', x - 26, y + 4); ctx.fillText('S', x, y + 31); },
+    drone(c, alpha = 1){ const x = X(c[0]), y = Y(c[1]); ctx.save(); ctx.globalAlpha = alpha; ctx.strokeStyle = '#dfe6ec'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x - 11, y - 11); ctx.lineTo(x + 11, y + 11); ctx.moveTo(x + 11, y - 11); ctx.lineTo(x - 11, y + 11); ctx.stroke(); for (const [a, b] of [[-11, -11], [11, -11], [-11, 11], [11, 11]]){ ctx.beginPath(); ctx.arc(x + a, y + b, 5.5, 0, 7); ctx.stroke(); } ctx.fillStyle = '#ff8a2a'; ctx.fillRect(x - 4, y - 4, 8, 8); ctx.restore(); },
+    helipad(c){ const x = X(c[0]), y = Y(c[1]); ctx.fillStyle = 'rgba(255,210,94,.18)'; ctx.strokeStyle = '#ffd25e'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 16, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ffd25e'; ctx.font = '700 15px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText('H', x, y + 5); },
+    ball(c, r = 8){ const x = X(c[0]), y = Y(c[1]), g = ctx.createRadialGradient(x - r * .4, y - r * .4, 1, x, y, r); g.addColorStop(0, '#fff3e0'); g.addColorStop(.4, '#4aa8ff'); g.addColorStop(1, '#1b4d8a'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); },
+    // something long drawn along a heading, centered at c: train, kayak, sled or plane
+    body(c, deg, kind){
+      const x = X(c[0]), y = Y(c[1]); ctx.save(); ctx.translate(x, y); ctx.rotate(-deg * D2R);
+      if (kind === 'train'){ ctx.fillStyle = '#5c6b7a'; ctx.fillRect(-58, -11, 116, 22); ctx.fillStyle = '#ff8a2a'; ctx.fillRect(-58, -11, 116, 5); ctx.fillStyle = '#bfe2f0'; for (let k = -46; k < 50; k += 18) ctx.fillRect(k, -3, 10, 7); ctx.fillStyle = '#20262d'; ctx.beginPath(); ctx.moveTo(58, -11); ctx.lineTo(70, 0); ctx.lineTo(58, 11); ctx.fill(); }
+      if (kind === 'kayak'){ ctx.fillStyle = '#ff8a2a'; ctx.beginPath(); ctx.ellipse(0, 0, 26, 7, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#20262d'; ctx.beginPath(); ctx.ellipse(0, 0, 6, 4, 0, 0, 7); ctx.fill(); ctx.strokeStyle = '#dfe6ec'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-4, -16); ctx.lineTo(4, 16); ctx.stroke(); }
+      if (kind === 'sled'){ ctx.fillStyle = '#a4713c'; ctx.fillRect(-14, -9, 28, 18); ctx.strokeStyle = '#c3ccd5'; ctx.lineWidth = 2.5; for (const s of [-11, 11]){ ctx.beginPath(); ctx.moveTo(-17, s); ctx.lineTo(17, s); ctx.quadraticCurveTo(22, s, 20, s * .6); ctx.stroke(); } }
+      if (kind === 'plane'){ ctx.fillStyle = '#dfe6ec'; ctx.beginPath(); ctx.ellipse(0, 0, 24, 5, 0, 0, 7); ctx.fill(); ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(-8, -22); ctx.lineTo(-13, -22); ctx.lineTo(-5, 0); ctx.lineTo(-13, 22); ctx.lineTo(-8, 22); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(-18, 0); ctx.lineTo(-25, -9); ctx.lineTo(-27, -9); ctx.lineTo(-23, 0); ctx.lineTo(-27, 9); ctx.lineTo(-25, 9); ctx.closePath(); ctx.fill(); }
+      if (kind === 'runner'){ ctx.fillStyle = '#ff8a2a'; ctx.beginPath(); ctx.arc(0, 0, 7, 0, 7); ctx.fill(); }
+      ctx.restore();
+    },
+    // faint streaks across the whole picture showing which way the air or water moves
+    streaks(deg, color, n = 26){ ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 1.5; const r = seededRandom(7), ux = Math.cos(deg * D2R), uy = -Math.sin(deg * D2R); for (let k = 0; k < n; k++){ const x = r() * W, y = r() * H; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + ux * 26, y + uy * 26); ctx.lineTo(x + ux * 20 - uy * 4, y + uy * 20 + ux * 4); ctx.stroke(); } ctx.restore(); },
+  };
+  return D;
+}
+function seededRandom(n){ return () => { n = (n * 16807) % 2147483647; return n / 2147483647; }; }
+const SCENES = {
+  '1.1': {extent:p => { const a = p.c * Math.cos(p.th * D2R), b = p.c * Math.sin(p.th * D2R); return [[a + .25 * p.c, 0], [a, b * 1.25], [-.15 * p.c, 0]]; },
+    draw(D, p, st){ const a = p.c * Math.cos(p.th * D2R), b = p.c * Math.sin(p.th * D2R);
+      D.wall(a, 0, b * 1.25); D.ground(0, -.15 * p.c, a + .25 * p.c); D.ladder([0, 0], [a, b]); D.arc([0, 0], 42, 0, p.th, `${p.th}°`); }},
+  '1.2': {draw(D, p){ D.ground(0, -.1 * p.a, p.a * 1.15); D.poly([[0, 0], [p.a, 0], [p.a, p.b]], 'rgba(141,156,171,.35)', '#8d9cab'); D.arc([0, 0], 46, 0, Math.atan2(p.b, p.a) / D2R, 'θ'); }},
+  '1.3': {draw(D, p){ D.body([0, 0], p.th, 'sled'); D.arc([0, 0], 40, 0, p.th, `${p.th}°`); }},
+  '1.4': {extent:() => [[1.1, 1.1], [-1.1, -1.1]],
+    draw(D, p){ D.ln([0, 0], [0, 0]); ctx.save(); ctx.strokeStyle = 'rgba(234,240,244,.5)'; ctx.setLineDash([4, 5]); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(D.X(0), D.Y(0), D.px(1), 0, 7); ctx.stroke(); ctx.restore(); label('length 1', D.X(0), D.Y(0) + D.px(1) + 18, '#c3ccd5', 11); }},
+  '1.5': {draw(D, p, st){ const v = pol(1, p.th), L = Math.max(Math.abs(p.k), 1) * p.B * 1.15; D.ln([-v[0] * L, -v[1] * L], [v[0] * L, v[1] * L], 'rgba(234,240,244,.25)', 1.5, [6, 6]); D.arc([0, 0], 34, 0, p.th, `${p.th}°`, '#ffd25e', st.fade); }},
+  '1.6': {draw(D, p){ D.drone([0, 0], .55); D.drone([p.Ax, p.Ay]); }},
+  '2.1': {draw(D, p, st){ D.crate([0, 0]); D.arc([0, 0], 40, 0, p.a1, `${p.a1}°`, '#6cc4ff', st.fade); D.arc([0, 0], 62, 0, p.a2, `${p.a2}°`, '#c79bff', st.fade); }},
+  '2.2': {draw(D, p){ D.compass(); ctx.save(); ctx.globalAlpha = .55; D.body([0, 0], 180, 'train'); ctx.restore(); }},
+  '2.3': {draw(D, p){ D.compass(); ctx.fillStyle = 'rgba(40,110,170,.2)'; ctx.fillRect(0, 0, W, H); D.streaks(p.dc, 'rgba(120,190,255,.45)'); D.body([0, 0], 90, 'kayak'); }},
+  '2.4': {draw(D, p, st){ D.compass(); if (st.fade < .5) D.flag([0, 0], '#62e0b5', 'start'); D.ref([0, 0], 0, 70, st.fade); D.ref([0, 0], 180, 70, st.fade); D.arc([0, 0], 42, 0, p.t1, `${p.t1}° N of E`, '#6cc4ff', st.fade); D.arc([0, 0], 56, 180, 180 - p.t2, `${p.t2}° N of W`, '#c79bff', st.fade); if (st.target) D.flag(st.T, '#ff6a1f', 'end'); }},
+  '2.5': {draw(D, p, st){ D.compass(); D.streaks(p.aw, 'rgba(200,215,230,.25)'); D.body([0, 0], p.a, 'plane'); D.arc([0, 0], 44, 0, p.a, `${p.a}°`, '#6cc4ff', st.fade); D.arc([0, 0], 66, 0, p.aw, `${p.aw}°`, '#c79bff', st.fade); }},
+  '3.1': {draw(D, p, st){ D.crate([0, 0]); D.arc([0, 0], 40, 0, p.a1, `${p.a1}°`, '#6cc4ff', st.fade); D.arc([0, 0], 62, 0, p.a2, `${p.a2}°`, '#c79bff', st.fade); }},
+  '3.3': {draw(D, p, st){ D.ref([0, 0], 0, 80, st.fade); D.ref([0, 0], 180, 80, st.fade); D.ring([0, 0]);
+      D.arc([0, 0], 40, 0, p.t1, `${p.t1}°`, C[0], st.fade); D.arc([0, 0], 56, 180, 180 - p.t2, `${p.t2}°`, C[1], st.fade); D.arc([0, 0], 72, 180, 180 + p.t3, `${p.t3}°`, C[2], st.fade); D.arc([0, 0], 88, 0, -p.t4, `${p.t4}°`, C[3], st.fade); }},
+  '3.4': {draw(D, p, st){ D.compass(); if (st.fade < .5) D.flag([0, 0], '#62e0b5', 'start'); D.ref([0, 0], 0, 70, st.fade); D.ref([0, 0], 180, 70, st.fade); D.arc([0, 0], 44, 0, -p.t2, `${p.t2}° S of E`, C[1], st.fade); D.arc([0, 0], 58, 180, 180 - p.t3, `${p.t3}° N of W`, C[2], st.fade); if (st.target) D.flag(st.T, '#ff6a1f', 'finish'); }},
+  '4.1': {draw(D, p){ D.ball([0, 0]); }},
+  '4.2': {draw(D, p, st){ D.compass(); D.helipad([0, 0]); D.drone(pol(p.r1, p.a1), .6); D.drone(pol(p.r2, p.a2)); D.arc([0, 0], 36, 0, p.a1, `${p.a1}°`, C[0], st.fade); D.arc([0, 0], 54, 0, p.a2, `${p.a2}°`, C[1], st.fade); }},
+  '4.4': {extent:p => [[p.v * .35, p.v * 1.05], [p.v * .35, -p.v * 1.05]],
+    draw(D, p, st){ D.wall(0, -p.v * 1.05, p.v * 1.05); D.ball([0, 0], 7);
+      D.arc([0, 0], 40, 90, 90 + p.al, `${p.al}°`, C[0], st.fade); D.arc([0, 0], 40, 270 - p.al, 270, `${p.al}°`, C[1], st.fade); }},
+  '4.5': {draw(D, p, st){ D.ln([-p.v1 * .9, 0], [0, 0], 'rgba(234,240,244,.35)', 10); const e = pol(p.v2 * .9, p.af); D.ln([0, 0], e, 'rgba(234,240,244,.35)', 10); D.body([0, 0], 0, 'runner'); D.arc([0, 0], 40, 0, p.af, `${p.af}°`, C[1], st.fade); }},
+};
+SCENES['3.2'] = SCENES['3.1'];
+
 function niceStep(raw){ const e = Math.pow(10, Math.floor(Math.log10(raw))); for (const m of [1, 2, 5, 10]) if (m * e >= raw) return m * e; return 10 * e; }
 function label(s, x, y, color, size = 13){
   if (!s) return;
@@ -377,6 +464,8 @@ function paint(){
     for (let y = Math.ceil(V.y0 / step) * step; y <= V.y1; y += step) if (Math.abs(y) > step / 2) ctx.fillText(+y.toPrecision(6), clamp(V.X(0) - 5, 26, W - 4), V.Y(y) + 4);
   }
   ctx.font = '600 12px "IBM Plex Mono", Menlo, monospace'; ctx.fillStyle = '#a9b6c2'; ctx.textAlign = 'right'; ctx.fillText('+x (E)', W - 8, clamp(V.Y(0) - 6, 50, H - 8)); ctx.textAlign = 'left'; ctx.fillText('+y (N)', clamp(V.X(0) + 6, 4, W - 60), 58);
+  // the scene: walls, floors, objects and angle marks for this problem
+  const SCN = SCENES[CODES[S.cur]]; if (SCN) SCN.draw(props(V), p, {fade:Q.pre ? 1 : 1 - clamp(S.P, 0, 1), target:S.target, T:Q.target(p)});
   // origin
   ctx.fillStyle = '#eaf0f4'; ctx.beginPath(); ctx.arc(V.X(0), V.Y(0), 3.5, 0, 7); ctx.fill();
   // given vectors sliding tip-to-tail
@@ -390,12 +479,13 @@ function paint(){
       const off = Q.side ? (i === 0 ? -16 : 16) : 0;
       if (t > 0){
         moved.add(it.label);
-        if (it.neg) arrow(V, [0, 0], raw, col, '', {alpha:.35, dash:true});
-        const a = [acc[0] * t, acc[1] * t]; arrow(V, a, sum([a, v]), col, (it.neg ? '−' : '') + it.label, {off: t > .99 ? off : 0});
+        const at = it.at || [0, 0];
+        if (it.neg) arrow(V, at, sum([at, raw]), col, '', {alpha:.35, dash:true});
+        const a = [at[0] + (acc[0] - at[0]) * t, at[1] + (acc[1] - at[1]) * t]; arrow(V, a, sum([a, v]), col, (it.neg ? '−' : '') + it.label, {off: t > .99 ? off : 0});
       }
       acc = sum([acc, v]);
     });
-    G.forEach((it, i) => { if (!moved.has(it.label)) arrow(V, [0, 0], rawOf(it), C[i % 4], it.label, {off: Q.side && P <= 0 ? (i === 0 ? -16 : 16) : 0}); });
+    G.forEach((it, i) => { if (!moved.has(it.label)) arrow(V, it.at || [0, 0], sum([it.at || [0, 0], rawOf(it)]), C[i % 4], it.label, {off: Q.side && P <= 0 ? (i === 0 ? -16 : 16) : 0}); });
   }
   // the target
   const T = Q.target(p);
