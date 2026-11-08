@@ -25,10 +25,13 @@ SHAPES = {
             "$x8 = $x6 + rand(1,2) where ($x6 + $x8 != 0)"],
            ["v2", "s1", "x6", "x8"]),
     "V1": (["$q = rand(1,2)", "$p = $q + rand(1,2)", "$r = $q + rand(1,3)"], ["p", "q", "r"]),
-    "V2": (["$p = rand(2,4)", "$q = rand(1,$p-1)", "$m = rand(2,4)",
-            "$n = rand(1,3) where ($n != $p && ($p + $q)/2 + 2*$q - 4*$m + $n != 0)",
-            "$t1 = 2*$q/($q + $m)", "$t2 = 2*$m/($m + $n)"],
-           ["p", "q", "m", "n"]),
+    # whole-number slopes k1 and k2, so every corner and zero crossing is on a whole or half second
+    "V2": (["$q = rand(1,3)", "$m = rand(1,3)",
+            '$k1 = randfrom("1,2") where (($q + $m)/$k1 <= 3)',
+            '$k2 = randfrom("1,2") where (2*$k2 > $m)',
+            "$n = 2*$k2 - $m", "$tB = 2 + ($q + $m)/$k1",
+            "$p = rand($q+1,5) where (($p + $q)/2 + $q + ($q - $m)*($tB - 2)/2 - $m*(6 - $tB) + ($n - $m) != 0)"],
+           ["q", "m", "k1", "k2", "p"]),
 }
 XQ = "Use the cart's <b>position vs. time</b> graph."
 VQ = "Use the cart's <b>velocity vs. time</b> graph."
@@ -50,11 +53,11 @@ QS = [
     ("3.3", "Displacement as area", "V1", "($p + $q)/2 + 2*$q + ($q + $r)", "Δx", "m", f"{VQ} What is the cart's displacement from <b>t = 0 s</b> to <b>t = 5 s</b>?"),
     ("3.4", "Greatest acceleration", "V1", "($r - $q)/2", "a", "m/s²", f"{VQ} What is the cart's greatest positive acceleration?"),
     ("3.5", "Whole-trip displacement", "V1", "($p + $q)/2 + 2*$q + ($q + $r) + $r", "Δx", "m", f"{VQ} What is the cart's displacement from <b>t = 0 s</b> to <b>t = 8 s</b>?"),
-    ("4.1", "Momentarily at rest", "V2", "2 + $t1", "t", "s", f"{VQ} At what time does the cart first come to rest (for an instant)?"),
-    ("4.2", "Turning around", "V2", "(-$m - $q)/2", "a", "m/s²", f"{VQ} What is the cart's acceleration at <b>t = 3 s</b>?"),
-    ("4.3", "Negative area", "V2", "($p + $q)/2 + 2*$q - 4*$m + $n", "Δx", "m", f"{VQ} What is the cart's displacement from <b>t = 0 s</b> to <b>t = 8 s</b>?"),
-    ("4.4", "Total distance", "V2", "($p + $q)/2 + $q + $q*$t1/2 + $m*(2 - $t1)/2 + 2*$m + $m*$t2/2 + $n*(2 - $t2)/2", "d", "m", f"{VQ} What total distance does the cart travel from <b>t = 0 s</b> to <b>t = 8 s</b>?"),
-    ("4.5", "Average acceleration", "V2", "($n - $p)/8", "a<sub>ave</sub>", "m/s²", f"{VQ} What is the cart's average acceleration from <b>t = 0 s</b> to <b>t = 8 s</b>?"),
+    ("4.1", "Momentarily at rest", "V2", "2 + $q/$k1", "t", "s", f"{VQ} At what time does the cart first come to rest (for an instant)?"),
+    ("4.2", "Turning around", "V2", "-$k1", "a", "m/s²", f"{VQ} What is the cart's acceleration at <b>t = 2.5 s</b>?"),
+    ("4.3", "Negative area", "V2", "($p + $q)/2 + $q + ($q - $m)*($tB - 2)/2 - $m*(6 - $tB) + ($n - $m)", "Δx", "m", f"{VQ} What is the cart's displacement from <b>t = 0 s</b> to <b>t = 8 s</b>?"),
+    ("4.4", "Total distance", "V2", "($p + $q)/2 + $q + $q*$q/(2*$k1) + $m*$m/(2*$k1) + $m*(6 - $tB) + $m*$m/(2*$k2) + $n*(2 - $m/$k2)/2", "d", "m", f"{VQ} What total distance does the cart travel from <b>t = 0 s</b> to <b>t = 8 s</b>?"),
+    ("4.5", "Average acceleration", "V2", "(-$m - $p)/6", "a<sub>ave</sub>", "m/s²", f"{VQ} What is the cart's average acceleration from <b>t = 0 s</b> to <b>t = 6 s</b>?"),
 ]
 assert len(QS) == 20
 

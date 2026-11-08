@@ -135,11 +135,16 @@ const SHAPES = {
   V1:{graph:'v', gen:() => { const q = ri(1, 2); return {p:q + ri(1, 2), q, r:q + ri(1, 3)}; },
       pts:p => [[0, p.p], [1, p.q], [3, p.q], [5, p.r], [7, 0], [8, 0]]},
   // Ex. 7: forward, turning around, backward, turning around again
-  V2:{graph:'v', gen:() => { const p = ri(2, 4), q = ri(1, p - 1), m = ri(2, 4); return {p, q, m, n:until(() => ri(1, 3), n => n !== p && (p + q) / 2 + 2 * q - 4 * m + n !== 0)}; },
-      pts:p => [[0, p.p], [1, p.q], [2, p.q], [4, -p.m], [6, -p.m], [8, p.n]]},
+  // Slopes are whole numbers (k1, k2 in m/s per s), so the corners and both zero crossings land on whole or half seconds.
+  V2:{graph:'v', gen:() => { const q = ri(1, 3), m = ri(1, 3), k1 = until(() => pick([1, 2]), k => (q + m) / k <= 3), k2 = until(() => pick([1, 2]), k => 2 * k > m), n = 2 * k2 - m;
+        return {q, m, k1, k2, p:until(() => ri(q + 1, 5), p => V2areas({p, q, m, k1, k2}).disp !== 0)}; },
+      pts:p => { const tB = 2 + (p.q + p.m) / p.k1; return [[0, p.p], [1, p.q], [2, p.q], [tB, -p.m], [6, -p.m], [8, 2 * p.k2 - p.m]]; }},
 };
 const fnOf = (sh, p) => SHAPES[sh].fn ? SHAPES[sh].fn(p) : (t => lin(SHAPES[sh].pts(p), t));
-const V2areas = p => { const t1 = 2 * p.q / (p.q + p.m), t2 = 2 * p.m / (p.m + p.n); return {t1, t2, disp:(p.p + p.q) / 2 + 2 * p.q - 4 * p.m + p.n, dist:(p.p + p.q) / 2 + p.q + p.q * t1 / 2 + p.m * (2 - t1) / 2 + 2 * p.m + p.m * t2 / 2 + p.n * (2 - t2) / 2}; };
+// key times and areas for the turning-around graph: the crossings at 2 + q/k1 and 6 + m/k2
+const V2areas = p => { const n2 = 2 * p.k2 - p.m, tB = 2 + (p.q + p.m) / p.k1, c1 = p.q / p.k1, c2 = p.m / p.k2;
+  return {n2, tB, c1, c2, disp:(p.p + p.q) / 2 + p.q + (p.q - p.m) * (tB - 2) / 2 - p.m * (6 - tB) + (n2 - p.m),
+    dist:(p.p + p.q) / 2 + p.q + p.q * c1 / 2 + p.m * (p.m / p.k1) / 2 + p.m * (6 - tB) + p.m * c2 / 2 + n2 * (2 - c2) / 2}; };
 
 /* ---------- the 20 questions ---------- */
 const CHAPTERS = ['Position graphs', 'Curved position', 'Velocity graphs', 'Turning around'];
@@ -194,20 +199,21 @@ const QS = [
   steps:p => [`Add the areas under the graph: 0–5 s gives <span class="m">${f((p.p + p.q) / 2 + 2 * p.q + p.q + p.r)} m</span>.`, `5–7 s (triangle): <span class="m">½(2)(${n(p.r)}) = ${f(p.r)} m</span>. From 7–8 s the cart is at rest.`, `<span class="m">Δx = ${f((p.p + p.q) / 2 + 2 * p.q + p.q + 2 * p.r)} m</span>`]},
 
 {ch:3, shape:'V2', name:'Momentarily at rest', sym:'t', unit:'s', probe:{kind:'time'},
-  story:() => `${VQ} At what time does the cart first come to rest (for an instant)?`, ans:p => 2 + V2areas(p).t1,
-  steps:p => { const t1 = V2areas(p).t1; return [`The cart is at rest where v = 0, where the graph crosses the time axis.`, `From 2 s to 4 s the velocity falls from ${n(p.q)} to ${n(-p.m)} m/s, a drop of ${n(p.q + p.m)} m/s in 2 s.`, `It reaches zero after <span class="m">${n(p.q)}/${n(p.q + p.m)} × 2 = ${f(t1)} s</span>, so at <span class="m">t = 2 + ${f(t1)} = ${f(2 + t1)} s</span>`]; }},
-{ch:3, shape:'V2', name:'Turning around', sym:'a', unit:'m/s²', probe:{kind:'slope', t:3},
-  story:() => `${VQ} What is the cart's acceleration at <b>t = 3 s</b>?`, ans:p => (-p.m - p.q) / 2,
-  steps:p => [`Acceleration is the slope of the v vs. t graph. From 2 s to 4 s:`, `<span class="m">a = (${n(-p.m)} − ${n(p.q)})/(4 − 2) = ${f((-p.m - p.q) / 2)} m/s²</span>`, `The acceleration is the same before, at and after the instant the cart turns around.`]},
+  story:() => `${VQ} At what time does the cart first come to rest (for an instant)?`, ans:p => 2 + p.q / p.k1,
+  steps:p => { const A = V2areas(p); return [`The cart is at rest where v = 0, where the graph crosses the time axis.`, `From 2 s the velocity falls from ${n(p.q)} m/s at ${n(p.k1)} m/s each second (the slope).`, `It reaches zero after <span class="m">${n(p.q)}/${n(p.k1)} = ${f(A.c1)} s</span>, at <span class="m">t = 2 + ${f(A.c1)} = ${f(2 + A.c1)} s</span>, which you can also read straight off the graph.`]; }},
+{ch:3, shape:'V2', name:'Turning around', sym:'a', unit:'m/s²', probe:{kind:'slope', t:2.5},
+  story:() => `${VQ} What is the cart's acceleration at <b>t = 2.5 s</b>?`, ans:p => -p.k1,
+  steps:p => { const A = V2areas(p); return [`Acceleration is the slope of the v vs. t graph. The straight piece runs from (2 s, ${n(p.q)} m/s) to (${n(A.tB)} s, ${n(-p.m)} m/s).`, `<span class="m">a = (${n(-p.m)} − ${n(p.q)})/(${n(A.tB)} − 2) = ${f(-p.k1)} m/s²</span>`, `The acceleration is the same before, at and after the instant the cart turns around.`]; }},
 {ch:3, shape:'V2', name:'Negative area', sym:'Δx', unit:'m', probe:{kind:'area', t1:0, t2:8},
   story:() => `${VQ} What is the cart's displacement from <b>t = 0 s</b> to <b>t = 8 s</b>?`, ans:p => V2areas(p).disp,
-  steps:p => [`Area above the time axis counts as positive, area below as negative.`, `0–1 s: <span class="m">½(${n(p.p)} + ${n(p.q)}) = ${f((p.p + p.q) / 2)} m</span>; 1–2 s: <span class="m">${n(p.q)} m</span>`, `2–4 s: <span class="m">½(${n(p.q)} + ${n(-p.m)})(2) = ${f(p.q - p.m)} m</span>; 4–6 s: <span class="m">${n(-p.m)} × 2 = ${f(-2 * p.m)} m</span>`, `6–8 s: <span class="m">½(${n(-p.m)} + ${n(p.n)})(2) = ${f(p.n - p.m)} m</span>`, `<span class="m">Δx = ${f(V2areas(p).disp)} m</span>`]},
+  steps:p => { const A = V2areas(p); return [`Area above the time axis counts as positive, area below as negative.`, `0–1 s: <span class="m">½(${n(p.p)} + ${n(p.q)})(1) = ${f((p.p + p.q) / 2)} m</span>; 1–2 s: <span class="m">${n(p.q)} × 1 = ${n(p.q)} m</span>`, `2–${n(A.tB)} s: <span class="m">½(${n(p.q)} + (${n(-p.m)}))(${n(A.tB - 2)}) = ${f((p.q - p.m) * (A.tB - 2) / 2)} m</span>. (A straight piece that crosses the axis still works as one trapezoid: the part below the axis comes out negative and cancels against the part above.)`, `${n(A.tB)}–6 s: <span class="m">${n(-p.m)} × ${n(6 - A.tB)} = ${f(-p.m * (6 - A.tB))} m</span>; 6–8 s: <span class="m">½(${n(-p.m)} + ${n(A.n2)})(2) = ${f(A.n2 - p.m)} m</span>`, `<span class="m">Δx = ${f(A.disp)} m</span>`]; }},
 {ch:3, shape:'V2', name:'Total distance', sym:'d', unit:'m', probe:{kind:'dist', t1:0, t2:8},
   story:() => `${VQ} What total distance does the cart travel from <b>t = 0 s</b> to <b>t = 8 s</b>?`, ans:p => V2areas(p).dist,
-  steps:p => { const {t1, t2, dist} = V2areas(p); return [`Distance counts every area as positive, so split the graph where it crosses the axis (at ${f(2 + t1)} s and ${f(6 + t2)} s).`, `Forward: <span class="m">${f((p.p + p.q) / 2)} + ${n(p.q)} + ½(${f(t1)})(${n(p.q)}) = ${f((p.p + p.q) / 2 + p.q + p.q * t1 / 2)} m</span>`, `Backward: <span class="m">½(${f(2 - t1)})(${n(p.m)}) + 2(${n(p.m)}) + ½(${f(t2)})(${n(p.m)}) = ${f(p.m * (2 - t1) / 2 + 2 * p.m + p.m * t2 / 2)} m</span>`, `Forward again: <span class="m">½(${f(2 - t2)})(${n(p.n)}) = ${f(p.n * (2 - t2) / 2)} m</span>`, `<span class="m">d = ${f(dist)} m</span>`]; }},
-{ch:3, shape:'V2', name:'Average acceleration', sym:'a<sub>ave</sub>', unit:'m/s²', probe:{kind:'chord', t1:0, t2:8},
-  story:() => `${VQ} What is the cart's average acceleration from <b>t = 0 s</b> to <b>t = 8 s</b>?`, ans:p => (p.n - p.p) / 8,
-  steps:p => [`Average acceleration is the slope of the line joining the start and end of the velocity graph.`, `<span class="m">a<sub>ave</sub> = (${n(p.n)} − ${n(p.p)})/(8 − 0) = ${f((p.n - p.p) / 8)} m/s²</span>`]},
+  steps:p => { const A = V2areas(p), z1 = 2 + A.c1, z2 = 6 + A.c2, fw1 = (p.p + p.q) / 2 + p.q + p.q * A.c1 / 2, back = p.m * (p.m / p.k1) / 2 + p.m * (6 - A.tB) + p.m * A.c2 / 2, fw2 = A.n2 * (2 - A.c2) / 2;
+    return [`Distance counts every area as positive, so split the graph where it crosses the axis: at ${n(z1)} s and ${n(z2)} s.`, `Forward, 0–${n(z1)} s: <span class="m">${f((p.p + p.q) / 2)} + ${n(p.q)} + ½(${n(A.c1)})(${n(p.q)}) = ${f(fw1)} m</span>`, `Backward, ${n(z1)}–${n(z2)} s: <span class="m">½(${n(A.tB - z1)})(${n(p.m)}) + (${n(6 - A.tB)})(${n(p.m)}) + ½(${n(A.c2)})(${n(p.m)}) = ${f(back)} m</span>`, `Forward again, ${n(z2)}–8 s: <span class="m">½(${n(8 - z2)})(${n(A.n2)}) = ${f(fw2)} m</span>`, `<span class="m">d = ${f(A.dist)} m</span>`]; }},
+{ch:3, shape:'V2', name:'Average acceleration', sym:'a<sub>ave</sub>', unit:'m/s²', probe:{kind:'chord', t1:0, t2:6},
+  story:() => `${VQ} What is the cart's average acceleration from <b>t = 0 s</b> to <b>t = 6 s</b>?`, ans:p => (-p.m - p.p) / 6,
+  steps:p => [`Average acceleration is the slope of the line joining the velocity graph at the two times.`, `<span class="m">a<sub>ave</sub> = (${n(-p.m)} − ${n(p.p)})/(6 − 0) = ${f((-p.m - p.p) / 6)} m/s²</span>`]},
 ];
 const CODES = QS.map((q, i) => `${q.ch + 1}.${i - QS.findIndex(x => x.ch === q.ch) + 1}`);
 for (const q of QS) q.gen = SHAPES[q.shape].gen;
@@ -268,7 +274,7 @@ function label(s, x, y, color, size = 13, align = 'center'){
 }
 function layout(){
   const top = 44, sceneH = Math.round(H * .3), gTop = top + sceneH + 14;
-  const gl = 58, gr = W - 18, gt = gTop + 10, gb = H - 34;
+  const gl = 58, gr = W - 18, gt = gTop + 10, gb = H - 40;
   return {top, sceneH, gTop, gl, gr, gt, gb};
 }
 function drawCart(cx, cy, w, alpha = 1, wheelAng = 0){
@@ -349,9 +355,14 @@ function paint(){
   ctx.fillStyle = '#121b24'; ctx.fillRect(L.gl, L.gt, L.gr - L.gl, L.gb - L.gt);
   const span = M.gmax - M.gmin, ystep = span > 14 ? 2 : 1;
   ctx.lineWidth = 1; ctx.font = '500 11px "IBM Plex Mono", Menlo, monospace';
-  for (let s = 0; s <= T_END * 2; s++){ const tt = s / 2; ctx.strokeStyle = s % 2 ? '#18232e' : '#24323f'; ctx.beginPath(); ctx.moveTo(GX(tt), L.gt); ctx.lineTo(GX(tt), L.gb); ctx.stroke(); if (!(s % 2)){ ctx.fillStyle = '#8796a5'; ctx.textAlign = 'center'; ctx.fillText(`${tt}`, GX(tt), L.gb + 14); } }
+  const halfRoom = GX(.5) - GX(0) >= 26;
+  for (let s = 0; s <= T_END * 2; s++){ const tt = s / 2, whole = !(s % 2), x = GX(tt);
+    ctx.strokeStyle = whole ? '#2c3d4d' : '#1d2a36'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, L.gt); ctx.lineTo(x, L.gb); ctx.stroke();
+    ctx.strokeStyle = '#c3ccd5'; ctx.lineWidth = whole ? 2 : 1.5; ctx.beginPath(); ctx.moveTo(x, L.gb); ctx.lineTo(x, L.gb + (whole ? 8 : 5)); ctx.stroke();
+    if (whole || halfRoom){ ctx.fillStyle = whole ? '#dfe6ec' : '#8796a5'; ctx.font = whole ? '600 12px "IBM Plex Mono", Menlo, monospace' : '500 10px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText(`${tt}`, x, L.gb + (whole ? 20 : 18)); } }
+  ctx.font = '500 11px "IBM Plex Mono", Menlo, monospace'; ctx.lineWidth = 1;
   for (let y = M.gmin; y <= M.gmax + 1e-9; y += ystep / 2){ const major = Math.abs(y / ystep - Math.round(y / ystep)) < 1e-6; ctx.strokeStyle = Math.abs(y) < 1e-9 ? '#6d7d8c' : major ? '#24323f' : '#18232e'; ctx.beginPath(); ctx.moveTo(L.gl, GY(y)); ctx.lineTo(L.gr, GY(y)); ctx.stroke(); if (major){ ctx.fillStyle = '#8796a5'; ctx.textAlign = 'right'; ctx.fillText(minus(+y.toFixed(2)), L.gl - 6, GY(y) + 4); } }
-  ctx.fillStyle = '#a9b6c2'; ctx.font = '600 12px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'right'; ctx.fillText('Time (s)', L.gr, L.gb + 28);
+  ctx.fillStyle = '#a9b6c2'; ctx.font = '600 12px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'right'; ctx.fillText('Time (s)', L.gr, L.gb + 32);
   ctx.save(); ctx.translate(16, (L.gt + L.gb) / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.fillText(M.kind === 'x' ? 'Position (m)' : 'Velocity (m/s)', 0, 0); ctx.restore();
   // shaded area for displacement and distance on velocity graphs
   if ((P.kind === 'area' || (P.kind === 'dist' && M.kind === 'v')) && (S.probe || S.run)){
@@ -362,6 +373,8 @@ function paint(){
   ctx.strokeStyle = '#6cc4ff'; ctx.lineWidth = 3.5; ctx.lineJoin = 'round'; ctx.beginPath();
   for (let i = 0; i <= 400; i++){ const tt = T_END * i / 400; i ? ctx.lineTo(GX(tt), GY(M.g(tt))) : ctx.moveTo(GX(tt), GY(M.g(tt))); }
   ctx.stroke();
+  // dots at the graph's corners make the key points easy to read
+  if (!SHAPES[Q.shape].fn || true){ const corners = SHAPES[Q.shape].pts(S.p); ctx.fillStyle = '#6cc4ff'; for (const [tt, yy] of corners){ ctx.beginPath(); ctx.arc(GX(tt), GY(yy), 4, 0, 7); ctx.fill(); } }
   // a given tangent line, drawn as part of the question
   if (Q.tangent){ const [[ta, ya], [tb, yb]] = Q.tangent(S.p), s2 = (yb - ya) / (tb - ta), e0 = Math.max(0, ta - .4), e1 = Math.min(T_END, tb + .4); ctx.save(); ctx.strokeStyle = '#c3ccd5'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]); ctx.beginPath(); ctx.moveTo(GX(e0), GY(ya + s2 * (e0 - ta))); ctx.lineTo(GX(e1), GY(ya + s2 * (e1 - ta))); ctx.stroke(); ctx.restore(); ctx.fillStyle = '#c3ccd5'; for (const [tt, yy] of [[ta, ya], [tb, yb]]){ ctx.beginPath(); ctx.arc(GX(tt), GY(yy), 4.5, 0, 7); ctx.fill(); } label('tangent at 1 s', GX(tb + .45), GY(yb) - 10, '#c3ccd5', 11, 'left'); }
   // probes on the graph

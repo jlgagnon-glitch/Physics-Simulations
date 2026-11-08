@@ -665,21 +665,22 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 
 ## 4.1 · Momentarily at rest
 
-Graph: V2 · Variables passed to the simulation: `p, q, m, n`
+Graph: V2 · Variables passed to the simulation: `q, m, k1, k2, p`
 
 **Common Control**
 
 ```
-$p = rand(2,4)
-$q = rand(1,$p-1)
-$m = rand(2,4)
-$n = rand(1,3) where ($n != $p && ($p + $q)/2 + 2*$q - 4*$m + $n != 0)
-$t1 = 2*$q/($q + $m)
-$t2 = 2*$m/($m + $n)
-$answer = 2 + $t1
+$q = rand(1,3)
+$m = rand(1,3)
+$k1 = randfrom("1,2") where (($q + $m)/$k1 <= 3)
+$k2 = randfrom("1,2") where (2*$k2 > $m)
+$n = 2*$k2 - $m
+$tB = 2 + ($q + $m)/$k1
+$p = rand($q+1,5) where (($p + $q)/2 + $q + ($q - $m)*($tB - 2)/2 - $m*(6 - $tB) + ($n - $m) != 0)
+$answer = 2 + $q/$k1
 $reltolerance = 0.02
 $stua = getstuans($stuanswers, $thisq)
-$simurl = "https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.1&p=$p&q=$q&m=$m&n=$n&mode=show"
+$simurl = "https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.1&q=$q&m=$m&k1=$k1&k2=$k2&p=$p&mode=show"
 $simurl = $simurl . "&launch=$stua" if ($stua != "")
 ```
 
@@ -700,8 +701,8 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 ```html
 <p>The correct answer is drawn on the graph. Tap the picture to replay the run.</p>
 <div style="max-width:820px">
-<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.1&p=$p&q=$q&m=$m&n=$n&mode=solution" title="Motion Graphs Lab: Momentarily at rest, solution" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:340px;border:0;border-radius:6px"></iframe>
-<p style="font-size:85%"> <a href="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.1&p=$p&q=$q&m=$m&n=$n&mode=solution" target="_blank" rel="noopener">Open in a new tab</a></p>
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.1&q=$q&m=$m&k1=$k1&k2=$k2&p=$p&mode=solution" title="Motion Graphs Lab: Momentarily at rest, solution" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:340px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"> <a href="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.1&q=$q&m=$m&k1=$k1&k2=$k2&p=$p&mode=solution" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
 ```
 
@@ -709,21 +710,22 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 
 ## 4.2 · Turning around
 
-Graph: V2 · Variables passed to the simulation: `p, q, m, n`
+Graph: V2 · Variables passed to the simulation: `q, m, k1, k2, p`
 
 **Common Control**
 
 ```
-$p = rand(2,4)
-$q = rand(1,$p-1)
-$m = rand(2,4)
-$n = rand(1,3) where ($n != $p && ($p + $q)/2 + 2*$q - 4*$m + $n != 0)
-$t1 = 2*$q/($q + $m)
-$t2 = 2*$m/($m + $n)
-$answer = (-$m - $q)/2
+$q = rand(1,3)
+$m = rand(1,3)
+$k1 = randfrom("1,2") where (($q + $m)/$k1 <= 3)
+$k2 = randfrom("1,2") where (2*$k2 > $m)
+$n = 2*$k2 - $m
+$tB = 2 + ($q + $m)/$k1
+$p = rand($q+1,5) where (($p + $q)/2 + $q + ($q - $m)*($tB - 2)/2 - $m*(6 - $tB) + ($n - $m) != 0)
+$answer = -$k1
 $reltolerance = 0.02
 $stua = getstuans($stuanswers, $thisq)
-$simurl = "https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.2&p=$p&q=$q&m=$m&n=$n&mode=show"
+$simurl = "https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.2&q=$q&m=$m&k1=$k1&k2=$k2&p=$p&mode=show"
 $simurl = $simurl . "&launch=$stua" if ($stua != "")
 ```
 
@@ -734,7 +736,7 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 <iframe src="$simurl" title="Motion Graphs Lab: Turning around" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:340px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">Watch the cart and its graph. After you submit, your answer is drawn on the graph. Tap to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>Use the cart's <b>velocity vs. time</b> graph. What is the cart's acceleration at <b>t = 3 s</b>?</p>
+<p>Use the cart's <b>velocity vs. time</b> graph. What is the cart's acceleration at <b>t = 2.5 s</b>?</p>
 <p>Use three significant figures.</p>
 <p>a = $answerbox m/s²</p>
 ```
@@ -744,8 +746,8 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 ```html
 <p>The correct answer is drawn on the graph. Tap the picture to replay the run.</p>
 <div style="max-width:820px">
-<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.2&p=$p&q=$q&m=$m&n=$n&mode=solution" title="Motion Graphs Lab: Turning around, solution" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:340px;border:0;border-radius:6px"></iframe>
-<p style="font-size:85%"> <a href="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.2&p=$p&q=$q&m=$m&n=$n&mode=solution" target="_blank" rel="noopener">Open in a new tab</a></p>
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.2&q=$q&m=$m&k1=$k1&k2=$k2&p=$p&mode=solution" title="Motion Graphs Lab: Turning around, solution" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:340px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"> <a href="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.2&q=$q&m=$m&k1=$k1&k2=$k2&p=$p&mode=solution" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
 ```
 
@@ -753,21 +755,22 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 
 ## 4.3 · Negative area
 
-Graph: V2 · Variables passed to the simulation: `p, q, m, n`
+Graph: V2 · Variables passed to the simulation: `q, m, k1, k2, p`
 
 **Common Control**
 
 ```
-$p = rand(2,4)
-$q = rand(1,$p-1)
-$m = rand(2,4)
-$n = rand(1,3) where ($n != $p && ($p + $q)/2 + 2*$q - 4*$m + $n != 0)
-$t1 = 2*$q/($q + $m)
-$t2 = 2*$m/($m + $n)
-$answer = ($p + $q)/2 + 2*$q - 4*$m + $n
+$q = rand(1,3)
+$m = rand(1,3)
+$k1 = randfrom("1,2") where (($q + $m)/$k1 <= 3)
+$k2 = randfrom("1,2") where (2*$k2 > $m)
+$n = 2*$k2 - $m
+$tB = 2 + ($q + $m)/$k1
+$p = rand($q+1,5) where (($p + $q)/2 + $q + ($q - $m)*($tB - 2)/2 - $m*(6 - $tB) + ($n - $m) != 0)
+$answer = ($p + $q)/2 + $q + ($q - $m)*($tB - 2)/2 - $m*(6 - $tB) + ($n - $m)
 $reltolerance = 0.02
 $stua = getstuans($stuanswers, $thisq)
-$simurl = "https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.3&p=$p&q=$q&m=$m&n=$n&mode=show"
+$simurl = "https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.3&q=$q&m=$m&k1=$k1&k2=$k2&p=$p&mode=show"
 $simurl = $simurl . "&launch=$stua" if ($stua != "")
 ```
 
@@ -788,8 +791,8 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 ```html
 <p>The correct answer is drawn on the graph. Tap the picture to replay the run.</p>
 <div style="max-width:820px">
-<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.3&p=$p&q=$q&m=$m&n=$n&mode=solution" title="Motion Graphs Lab: Negative area, solution" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:340px;border:0;border-radius:6px"></iframe>
-<p style="font-size:85%"> <a href="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.3&p=$p&q=$q&m=$m&n=$n&mode=solution" target="_blank" rel="noopener">Open in a new tab</a></p>
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.3&q=$q&m=$m&k1=$k1&k2=$k2&p=$p&mode=solution" title="Motion Graphs Lab: Negative area, solution" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:340px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"> <a href="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.3&q=$q&m=$m&k1=$k1&k2=$k2&p=$p&mode=solution" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
 ```
 
@@ -797,21 +800,22 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 
 ## 4.4 · Total distance
 
-Graph: V2 · Variables passed to the simulation: `p, q, m, n`
+Graph: V2 · Variables passed to the simulation: `q, m, k1, k2, p`
 
 **Common Control**
 
 ```
-$p = rand(2,4)
-$q = rand(1,$p-1)
-$m = rand(2,4)
-$n = rand(1,3) where ($n != $p && ($p + $q)/2 + 2*$q - 4*$m + $n != 0)
-$t1 = 2*$q/($q + $m)
-$t2 = 2*$m/($m + $n)
-$answer = ($p + $q)/2 + $q + $q*$t1/2 + $m*(2 - $t1)/2 + 2*$m + $m*$t2/2 + $n*(2 - $t2)/2
+$q = rand(1,3)
+$m = rand(1,3)
+$k1 = randfrom("1,2") where (($q + $m)/$k1 <= 3)
+$k2 = randfrom("1,2") where (2*$k2 > $m)
+$n = 2*$k2 - $m
+$tB = 2 + ($q + $m)/$k1
+$p = rand($q+1,5) where (($p + $q)/2 + $q + ($q - $m)*($tB - 2)/2 - $m*(6 - $tB) + ($n - $m) != 0)
+$answer = ($p + $q)/2 + $q + $q*$q/(2*$k1) + $m*$m/(2*$k1) + $m*(6 - $tB) + $m*$m/(2*$k2) + $n*(2 - $m/$k2)/2
 $reltolerance = 0.02
 $stua = getstuans($stuanswers, $thisq)
-$simurl = "https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.4&p=$p&q=$q&m=$m&n=$n&mode=show"
+$simurl = "https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.4&q=$q&m=$m&k1=$k1&k2=$k2&p=$p&mode=show"
 $simurl = $simurl . "&launch=$stua" if ($stua != "")
 ```
 
@@ -832,8 +836,8 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 ```html
 <p>The correct answer is drawn on the graph. Tap the picture to replay the run.</p>
 <div style="max-width:820px">
-<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.4&p=$p&q=$q&m=$m&n=$n&mode=solution" title="Motion Graphs Lab: Total distance, solution" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:340px;border:0;border-radius:6px"></iframe>
-<p style="font-size:85%"> <a href="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.4&p=$p&q=$q&m=$m&n=$n&mode=solution" target="_blank" rel="noopener">Open in a new tab</a></p>
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.4&q=$q&m=$m&k1=$k1&k2=$k2&p=$p&mode=solution" title="Motion Graphs Lab: Total distance, solution" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:340px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"> <a href="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.4&q=$q&m=$m&k1=$k1&k2=$k2&p=$p&mode=solution" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
 ```
 
@@ -841,21 +845,22 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 
 ## 4.5 · Average acceleration
 
-Graph: V2 · Variables passed to the simulation: `p, q, m, n`
+Graph: V2 · Variables passed to the simulation: `q, m, k1, k2, p`
 
 **Common Control**
 
 ```
-$p = rand(2,4)
-$q = rand(1,$p-1)
-$m = rand(2,4)
-$n = rand(1,3) where ($n != $p && ($p + $q)/2 + 2*$q - 4*$m + $n != 0)
-$t1 = 2*$q/($q + $m)
-$t2 = 2*$m/($m + $n)
-$answer = ($n - $p)/8
+$q = rand(1,3)
+$m = rand(1,3)
+$k1 = randfrom("1,2") where (($q + $m)/$k1 <= 3)
+$k2 = randfrom("1,2") where (2*$k2 > $m)
+$n = 2*$k2 - $m
+$tB = 2 + ($q + $m)/$k1
+$p = rand($q+1,5) where (($p + $q)/2 + $q + ($q - $m)*($tB - 2)/2 - $m*(6 - $tB) + ($n - $m) != 0)
+$answer = (-$m - $p)/6
 $reltolerance = 0.02
 $stua = getstuans($stuanswers, $thisq)
-$simurl = "https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.5&p=$p&q=$q&m=$m&n=$n&mode=show"
+$simurl = "https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.5&q=$q&m=$m&k1=$k1&k2=$k2&p=$p&mode=show"
 $simurl = $simurl . "&launch=$stua" if ($stua != "")
 ```
 
@@ -866,7 +871,7 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 <iframe src="$simurl" title="Motion Graphs Lab: Average acceleration" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:340px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">Watch the cart and its graph. After you submit, your answer is drawn on the graph. Tap to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>Use the cart's <b>velocity vs. time</b> graph. What is the cart's average acceleration from <b>t = 0 s</b> to <b>t = 8 s</b>?</p>
+<p>Use the cart's <b>velocity vs. time</b> graph. What is the cart's average acceleration from <b>t = 0 s</b> to <b>t = 6 s</b>?</p>
 <p>Use three significant figures.</p>
 <p>a<sub>ave</sub> = $answerbox m/s²</p>
 ```
@@ -876,8 +881,8 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 ```html
 <p>The correct answer is drawn on the graph. Tap the picture to replay the run.</p>
 <div style="max-width:820px">
-<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.5&p=$p&q=$q&m=$m&n=$n&mode=solution" title="Motion Graphs Lab: Average acceleration, solution" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:340px;border:0;border-radius:6px"></iframe>
-<p style="font-size:85%"> <a href="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.5&p=$p&q=$q&m=$m&n=$n&mode=solution" target="_blank" rel="noopener">Open in a new tab</a></p>
+<iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.5&q=$q&m=$m&k1=$k1&k2=$k2&p=$p&mode=solution" title="Motion Graphs Lab: Average acceleration, solution" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:340px;border:0;border-radius:6px"></iframe>
+<p style="font-size:85%"> <a href="https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html?level=4.5&q=$q&m=$m&k1=$k1&k2=$k2&p=$p&mode=solution" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
 ```
 
