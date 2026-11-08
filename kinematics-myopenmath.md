@@ -669,7 +669,7 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 <iframe src="$simurl" title="Constant Acceleration Lab: Ball thrown up: height" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:320px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">Watch the motion. After you submit, your answer appears in the scene. Tap to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>A ball is thrown straight up from ground level at <b>$v0 m/s</b>. How high does it rise?</p>
+<p>A ball is thrown straight up at <b>$v0 m/s</b>. How high above the release point does it rise?</p>
 <p>Use g = 9.80 m/s<sup>2</sup> where needed, and three significant figures.</p>
 <p>Δy = $answerbox m</p>
 ```
@@ -708,7 +708,7 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 <iframe src="$simurl" title="Constant Acceleration Lab: Ball thrown up: time of flight" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:320px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">Watch the motion. After you submit, your answer appears in the scene. Tap to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>A ball is thrown straight up from ground level at <b>$v0 m/s</b>. How long is it in the air before it returns to the ground?</p>
+<p>A ball is thrown straight up at <b>$v0 m/s</b>. How long is it in the air before it comes back down to the height it was released from?</p>
 <p>Use g = 9.80 m/s<sup>2</sup> where needed, and three significant figures.</p>
 <p>Δt = $answerbox s</p>
 ```
@@ -771,9 +771,9 @@ Variables passed to the simulation: `v0, yi, bar`
 **Common Control**
 
 ```
-$v0 = rrand(3.5,5,0.1)
-$yi = rrand(1,1.3,0.05)
-$bar = rrand(1.9,2.5,0.05)
+$v0 = rrand(4,5,0.1)
+$yi = rrand(1,1.2,0.05)
+$bar = rrand(1.8,2.4,0.05) where (abs($bar - ($yi + $v0*$v0/19.6)) <= 0.15)
 $answer = $yi + $v0*$v0/(2*9.8)
 $reltolerance = 0.02
 $stua = getstuans($stuanswers, $thisq)
@@ -812,9 +812,9 @@ Variables passed to the simulation: `v0, yi, bar`
 **Common Control**
 
 ```
-$v0 = rrand(3.5,5,0.1)
-$yi = rrand(1,1.3,0.05)
-$bar = rrand(1.9,2.5,0.05)
+$v0 = rrand(4,5,0.1)
+$yi = rrand(1,1.2,0.05)
+$bar = rrand(1.8,2.4,0.05) where (abs($bar - ($yi + $v0*$v0/19.6)) <= 0.15)
 $answer = $v0/9.8
 $reltolerance = 0.02
 $stua = getstuans($stuanswers, $thisq)

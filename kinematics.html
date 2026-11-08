@@ -136,7 +136,8 @@ const carGen = () => { const v0 = ri(20, 35), a = -ri(2, 5); return {v0, a, t:un
 const deerGen = () => { const a = -rnd(3, 5, .1), D = ri(18, 40); return {a, D, v0:until(() => rnd(9, 16, .1), v0 => v0 * v0 / (-2 * a) < D - 1)}; };
 const twoGen = () => { const a1 = rnd(1.5, 3, .5), t1 = ri(4, 6); return {a1, t1, a2:until(() => -rnd(1, 3, .5), a2 => a1 * t1 + a2 * 4 > .5), t2:ri(2, 4)}; };   // still moving forward after braking, however long the braking
 const puckGen = () => ({v0:ri(20, 35), a:-rnd(.3, .8, .1), D:ri(25, 45), t:rnd(1, 1.5, .05)});
-const jumpGen = () => ({v0:rnd(3.5, 5, .1), yi:rnd(1, 1.3, .05), bar:rnd(1.9, 2.5, .05)});
+// realistic numbers: bar 1.80-2.40 m (the world record is 2.45 m), set within 15 cm of the jumper's peak
+const jumpGen = () => { const v0 = rnd(4, 5, .1), yi = rnd(1, 1.2, .05), pk = yi + v0 * v0 / (2 * g); return {v0, yi, bar:until(() => rnd(1.8, 2.4, .05), b => Math.abs(b - pk) <= .15)}; };
 const QS = [
 {ch:0, name:'Runner: final velocity', scene:'track', sym:'v', unit:'m/s', gen:runnerGen, hide:['speed'], probe:'speed',
   story:p => `A runner moving at <b>${n(p.v0)} m/s</b> speeds up at a constant <b>${n(p.a)} m/s²</b> for <b>${p.t} s</b>. What is the runner's velocity at the end of this time?`,
@@ -202,13 +203,13 @@ const QS = [
   steps:p => { const v = Math.sqrt(p.v0 * p.v0 + 2 * p.a * p.D); return [`First the speed at the goal: <span class="m">v = √(${p.v0}² + 2(${n(p.a)})(${p.D})) = ${f(v)} m/s</span>`, `Then <span class="m">Δt = (v − v₀)/a = (${f(v)} − ${p.v0})/(${n(p.a)}) = ${f((v - p.v0) / p.a)} s</span>`]; }},
 
 {ch:3, name:'Ball thrown up: height', scene:'ball', sym:'Δy', unit:'m', gen:() => ({v0:rnd(10, 30, .5)}), hide:['scale'], probe:'height',
-  story:p => `A ball is thrown straight up from ground level at <b>${n(p.v0)} m/s</b>. How high does it rise?`,
+  story:p => `A ball is thrown straight up at <b>${n(p.v0)} m/s</b>. How high above the release point does it rise?`,
   motion:p => throwUp(p.v0, 2 * p.v0 / g), ans:p => p.v0 * p.v0 / (2 * g),
   steps:p => [`At the top, v = 0: <span class="m">0 = v₀² − 2gΔy</span>`, `<span class="m">Δy = ${n(p.v0)}²/(2 × 9.80) = ${f(p.v0 * p.v0 / (2 * g))} m</span>`]},
 {ch:3, name:'Ball thrown up: time of flight', scene:'ball', sym:'Δt', unit:'s', gen:() => ({v0:rnd(10, 30, .5)}), hide:['clock'], probe:'time',
-  story:p => `A ball is thrown straight up from ground level at <b>${n(p.v0)} m/s</b>. How long is it in the air before it returns to the ground?`,
+  story:p => `A ball is thrown straight up at <b>${n(p.v0)} m/s</b>. How long is it in the air before it comes back down to the height it was released from?`,
   motion:p => throwUp(p.v0, 2 * p.v0 / g), ans:p => 2 * p.v0 / g,
-  steps:p => [`Back on the ground, Δy = 0: <span class="m">0 = v₀Δt − ½g(Δt)² = Δt(v₀ − 4.90Δt)</span>`, `<span class="m">Δt = ${n(p.v0)}/4.90 = ${f(2 * p.v0 / g)} s</span>`]},
+  steps:p => [`Back at the release height, Δy = 0: <span class="m">0 = v₀Δt − ½g(Δt)² = Δt(v₀ − 4.90Δt)</span>`, `<span class="m">Δt = ${n(p.v0)}/4.90 = ${f(2 * p.v0 / g)} s</span>`]},
 {ch:3, name:'Caught on the way down', scene:'catch', sym:'v₀', unit:'m/s', gen:() => ({T:rnd(1, 4, .1)}), hide:[], probe:'throw',
   story:p => `A ball thrown straight up is caught by the thrower, at the same height, <b>${n(p.T)} s</b> later. With what speed was it thrown?`,
   motion:(p, v0) => throwUp(v0 == null ? g * p.T / 2 : v0, Math.max(p.T, v0 == null ? 0 : 2 * v0 / g) + .15), ans:p => g * p.T / 2,
@@ -320,6 +321,118 @@ function stopwatch(cx, cy, r, t, hide, ghostT){
   ctx.font = '600 12px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#eaf0f4'; ctx.fillText(hide ? 't = •.•• s' : `t = ${t.toFixed(2)} s`, cx, cy + r + 20);
 }
 
+/* ---------- people: a properly proportioned figure built from joints ---------- */
+const SKIN = '#e2b48a', SKIN_D = '#c99870', HAIR = '#3a2a1a';
+function limb(a, b, w, color){ ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+// J holds pixel positions: head, neck, sh (shoulder), hip, and both sides' elbow, hand, knee, foot (eN/eF = near/far side)
+function drawFigure(J, s, shirt, look){
+  const w = k => Math.max(2, k * s);
+  // far side first, so the near arm and leg overlap the body
+  limb(J.sh, J.eF, w(.085), SKIN_D); limb(J.eF, J.hF, w(.07), SKIN_D);
+  limb(J.hip, J.kF, w(.13), '#262d36'); limb(J.kF, J.fF, w(.1), SKIN_D); limb(J.fF, [J.fF[0] + (J.toeF || [w(.12), 0])[0], J.fF[1] + (J.toeF || [0, 0])[1]], w(.08), '#f2f4f6');
+  limb(J.hip, J.kN, w(.135), '#2d353f'); limb(J.kN, J.fN, w(.105), SKIN); limb(J.fN, [J.fN[0] + (J.toeN || [w(.12), 0])[0], J.fN[1] + (J.toeN || [0, 0])[1]], w(.085), '#ffffff');
+  limb(J.hip, J.sh, w(.3), shirt); limb(J.sh, J.neck, w(.1), SKIN);
+  limb(J.sh, J.eN, w(.09), shirt); limb(J.eN, J.hN, w(.075), SKIN);
+  ctx.fillStyle = SKIN; ctx.beginPath(); ctx.arc(J.head[0], J.head[1], w(.115), 0, 7); ctx.fill();
+  // hair on the back of the head, away from the way the person looks
+  const a = Math.atan2(look[1], look[0]); ctx.fillStyle = HAIR; ctx.beginPath(); ctx.arc(J.head[0], J.head[1], w(.118), a + Math.PI * .45, a + Math.PI * 1.55); ctx.fill();
+  ctx.fillStyle = '#20262d'; ctx.beginPath(); ctx.arc(J.head[0] + look[0] * w(.07), J.head[1] + look[1] * w(.07), w(.018) + .6, 0, 7); ctx.fill();
+}
+const add = (a, v, k) => [a[0] + v[0] * k, a[1] + v[1] * k];
+const dirFromDown = (a, side) => [side * Math.sin(a), Math.cos(a)];   // a = 0 hangs straight down, a = π points straight up
+
+// The thrower: arm straight up at release and catch, down at the side while the ball is high. Ball heights are
+// measured up from the release point; the figure is drawn large so it reads clearly (it is not to the height scale).
+function drawThrow(Q, p, t, gy){
+  ctx.fillStyle = '#5b8f4f'; ctx.fillRect(0, gy, W, H - gy);
+  const FH = clamp(H * .27, 90, 150), s = FH / 1.85, fx = W * .52;
+  const mo2 = S.stuMo || S.mo, yb = Math.max(0, mo2.s(Math.min(t, mo2.dur)));
+  // how far up the throwing arm is: up near the hand (release, catch), down while the ball is high
+  const falling = mo2.v(Math.min(t, mo2.dur)) < 0, near = clamp(1 - yb / 1.6, 0, 1);
+  let up = t < .18 ? 1 : falling ? near : clamp(1 - (t - .18) / .3, 0, 1);   // follow-through after release, then reach up for the catch
+  if (Q.scene === 'catch' && Math.abs(t - p.T) < .3) up = 1; if (t <= 0 && S.phase === 'given') up = 1;
+  const catching = falling ? near : 0;
+  const shY = gy - 1.45 * s, sh = [fx, shY], armA = .25 + up * (Math.PI - .3);
+  const eN = add(sh, dirFromDown(armA, 1), .3 * s), hN = add(eN, dirFromDown(armA - .12 * (1 - up), 1), .28 * s);
+  const armB = .3 + catching * (Math.PI - .55);
+  const eF = add(sh, dirFromDown(armB, -1), .3 * s), hF = add(eF, dirFromDown(armB + .1, -1), .28 * s);
+  const releaseY = gy - 2.03 * s, handX = fx + .06 * s;
+  const peak = Math.max(S.mo.s(S.mo.dur / 2), S.stuMo ? S.stuMo.s(S.stuMo.dur / 2) : 0, S.stu != null && Q.probe === 'height' ? S.stu : 0, 1.5);
+  const ymax = peak * 1.18, Y = y => releaseY - y / ymax * (releaseY - 66);
+  // a height pole measured from the release point
+  const px = W * .3; ctx.fillStyle = '#e9eef3'; ctx.fillRect(px - 3, Y(ymax * .98), 6, Y(0) - Y(ymax * .98) + 2);
+  let step = 1; for (const s2 of [.5, 1, 2, 5, 10]){ step = s2; if (Y(0) - Y(s2) >= 34) break; }
+  ctx.font = '600 11px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'right';
+  for (let m = 0; m <= ymax * .98 + 1e-9; m += step){ ctx.fillStyle = '#20262d'; ctx.fillRect(px - 8, Y(m) - 1, 16, 2); if (!hidden('scale')){ ctx.fillStyle = '#20262d'; ctx.fillText(`${+m.toFixed(2)} m`, px - 12, Y(m) + 4); } }
+  ctx.save(); ctx.strokeStyle = 'rgba(32,38,45,.55)'; ctx.setLineDash([5, 5]); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(px, Y(0)); ctx.lineTo(W - 20, Y(0)); ctx.stroke(); ctx.restore();
+  label('release height (0 m)', W - 24, Y(0) + 16, '#eaf0f4', 10, 'right');
+  if (hidden('scale')) label('height markings hidden', px, Y(0) - 14, '#a9b6c2', 11, 'right');
+  // the person, looking up toward the ball
+  const head = [fx + .02 * s, gy - 1.7 * s], lk = Math.atan2(Y(yb) - head[1], handX - head[0]), look = [Math.cos(lk) * .6 + .5, Math.sin(lk)];
+  const ll = Math.hypot(look[0], look[1]);
+  drawFigure({head, neck:[fx, gy - 1.56 * s], sh, hip:[fx, gy - .95 * s], eN, hN, eF, hF, kN:[fx + .06 * s, gy - .5 * s], fN:[fx + .1 * s, gy], kF:[fx - .06 * s, gy - .5 * s], fF:[fx - .1 * s, gy]}, s, '#2c6fb3', [look[0] / ll, look[1] / ll]);
+  // ghost images and the ball
+  const gap = mo2.dur / 10;
+  for (let k = 1; k * gap < t - 1e-6; k++){ ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.beginPath(); ctx.arc(handX + (k % 2 ? 8 : 0), Y(Math.max(0, mo2.s(k * gap))) - 8, 7, 0, 7); ctx.fill(); }
+  const inHand = yb < .05 && up > .9, bxp = inHand ? hN[0] : handX, byp = inHand ? hN[1] - 8 : Y(yb) - 8;
+  const gr2 = ctx.createRadialGradient(bxp - 3, byp - 3, 1, bxp, byp, 8); gr2.addColorStop(0, '#fff'); gr2.addColorStop(1, '#e0322a'); ctx.fillStyle = gr2; ctx.beginPath(); ctx.arc(bxp, byp, 8, 0, 7); ctx.fill();
+  if (Q.scene === 'catch') label(`caught at ${n(p.T)} s`, fx + .5 * s, Y(0) - 22, '#eaf0f4', 12, 'left');
+  // predictions and answers
+  if (S.stu != null && S.phase !== 'run1'){
+    if (Q.probe === 'height'){ const yy = Y(S.stu); ctx.strokeStyle = '#ff8a2a'; ctx.lineWidth = 2.5; ctx.setLineDash([8, 5]); ctx.beginPath(); ctx.moveTo(px, yy); ctx.lineTo(W - 20, yy); ctx.stroke(); ctx.setLineDash([]); label('your height', W - 24, yy - 7, '#ff8a2a', 12, 'right'); }
+    if (Q.probe === 'time' && S.stu >= 0){ const cy = Y(Math.max(0, S.mo.s(Math.min(S.stu, S.mo.dur)))) - 8; ctx.strokeStyle = '#ff8a2a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(handX, cy, 12, 0, 7); ctx.stroke(); label('at your time', handX + 18, cy + 4, '#ff8a2a', 11, 'left'); }
+  }
+  if (S.reveal && S.phase === 'done' && Q.probe === 'height'){ const a = Q.ans(p), yy = Y(a); ctx.strokeStyle = '#7dffc1'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px, yy); ctx.lineTo(W - 20, yy); ctx.stroke(); label(`Δy = ${f(a)} m`, px + 10, yy + 18, '#7dffc1', 12, 'left'); }
+  return {objPx:byp};
+}
+
+// The high jumper: a Fosbury flop seen from the side, drawn to scale. Back to the bar at takeoff, rotating and
+// arching face-up over the bar head first, then landing on the shoulders. The center of gravity follows y(t).
+function drawJump(Q, p, t, gy){
+  const mo2 = S.stuMo || S.mo, tp = p.v0 / g, peak = p.yi + p.v0 * p.v0 / (2 * g);
+  const top = Math.max(peak, p.bar, S.stu != null && Q.probe === 'height' ? S.stu : 0) + .55;
+  const k = (gy - 66) / top, Y = y => gy - y * k, bx = W * .56, vx = 1.6, X = x => bx + x * k;
+  // runway, landing mat, and the bar seen from its end, on two standards in perspective
+  ctx.fillStyle = '#b5482f'; ctx.fillRect(0, gy, W, H - gy);
+  ctx.fillStyle = '#1f4f9a'; ctx.fillRect(X(.25), Y(.7), 3.2 * k, .7 * k); ctx.fillStyle = '#2c64bf'; ctx.fillRect(X(.25), Y(.7), 3.2 * k, .12 * k);
+  const farOff = [-14, -10], bar = [bx, Y(p.bar)];
+  ctx.fillStyle = '#9aa7b4'; ctx.fillRect(bx + farOff[0] - 2, Y(p.bar + .35) + farOff[1], 4, gy - Y(p.bar + .35) - 6);
+  // pole height scale (heights from the ground)
+  const px = W * .2; ctx.fillStyle = '#e9eef3'; ctx.fillRect(px - 3, Y(top - .1), 6, gy - Y(top - .1));
+  ctx.font = '600 11px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'right';
+  for (let m = 0; m <= top - .1 + 1e-9; m += .25){ const whole = Math.abs(m * 2 - Math.round(m * 2)) < 1e-9; ctx.fillStyle = '#20262d'; ctx.fillRect(px - (whole ? 8 : 5), Y(m) - 1, whole ? 16 : 10, 2); if (whole && !hidden('scale')){ ctx.fillStyle = '#eaf0f4'; ctx.fillText(`${m.toFixed(1)} m`, px - 12, Y(m) + 4); } }
+  if (hidden('scale')) label('height markings hidden', px, gy + 22, '#a9b6c2', 11);
+  // the jumper
+  const tt = Math.min(t, mo2.dur), yc = mo2.s(tt), xc = (tt - tp) * vx;
+  const phi = (tt <= tp ? 100 * tt / tp : 100 + 22 * (tt - tp) / tp) * Math.PI / 180, arch = clamp(1 - Math.abs(tt - tp) / (.7 * tp), 0, 1);
+  const body = { head:[-.3 * arch, .64], neck:[-.22 * arch, .53], sh:[-.2 * arch, .42], hip:[.12 * arch, -.08],
+    eN:[-.1 - .1 * arch, .17], hN:[-.02 - .08 * arch, -.08], eF:[-.13 - .08 * arch, .19], hF:[-.06 - .08 * arch, -.06],
+    kN:[-.16 * arch + .03, -.52], fN:[-.42 * arch, -.95 + .38 * arch], kF:[-.18 * arch - .02, -.5], fF:[-.44 * arch - .04, -.92 + .38 * arch] };
+  // body frame (x = the way the face points, y = head) to the world: the face starts pointing away from the bar, then the body rotates clockwise
+  const toW = ([bxb, byb]) => { const Xb = -bxb, Yb = byb, c = Math.cos(phi), s2 = Math.sin(phi); return [X(xc + Xb * c + Yb * s2), Y(yc - Xb * s2 + Yb * c)]; };
+  const J = {}; for (const key in body) J[key] = toW(body[key]);
+  const faceW = toW([1, 0]), cgW = toW([0, 0]), look = [faceW[0] - cgW[0], faceW[1] - cgW[1]];
+  drawFigure(J, k, '#d9452b', look);
+  // the bar in front of the jumper's far side: drawn after the body so it reads as passing under the arch
+  ctx.strokeStyle = '#ffd25e'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(bar[0] + farOff[0], bar[1] + farOff[1]); ctx.lineTo(bar[0] + 10, bar[1] + 7); ctx.stroke();
+  ctx.fillStyle = '#c3ccd5'; ctx.fillRect(bx + 8, bar[1] + 4, 4, gy - bar[1] - 4);
+  label(`bar ${n(p.bar)} m`, bx + 24, bar[1] + 4, '#ffd25e', 12, 'left');
+  // the center of gravity, the quantity the physics is about
+  const cg = [X(xc), Y(yc)];
+  ctx.fillStyle = '#eaf0f4'; ctx.strokeStyle = '#20262d'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cg[0], cg[1], 6, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#20262d'; ctx.beginPath(); ctx.moveTo(cg[0], cg[1]); ctx.arc(cg[0], cg[1], 6, 0, Math.PI / 2); ctx.fill(); ctx.beginPath(); ctx.moveTo(cg[0], cg[1]); ctx.arc(cg[0], cg[1], 6, Math.PI, Math.PI * 1.5); ctx.fill();
+  label('center of gravity', cg[0] - 12, cg[1] + 24, '#eaf0f4', 10, 'right');
+  // ghost positions of the center of gravity
+  const gap = mo2.dur / 8; for (let j = 1; j * gap < t - 1e-6; j++){ ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.beginPath(); ctx.arc(X((j * gap - tp) * vx), Y(mo2.s(j * gap)), 4, 0, 7); ctx.fill(); }
+  // predictions and answers
+  if (S.stu != null && S.phase !== 'run1'){
+    if (Q.probe === 'height'){ const yy = Y(S.stu); ctx.strokeStyle = '#ff8a2a'; ctx.lineWidth = 2.5; ctx.setLineDash([8, 5]); ctx.beginPath(); ctx.moveTo(px, yy); ctx.lineTo(W - 20, yy); ctx.stroke(); ctx.setLineDash([]); label('your height', W - 24, yy - 7, '#ff8a2a', 12, 'right'); }
+    if (Q.probe === 'time' && S.stu >= 0){ const ts = Math.min(S.stu, S.mo.dur), cx = X((ts - tp) * vx), cy = Y(S.mo.s(ts)); ctx.strokeStyle = '#ff8a2a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(cx, cy, 11, 0, 7); ctx.stroke(); label('at your time', cx + 16, cy - 10, '#ff8a2a', 11, 'left'); }
+  }
+  if (S.reveal && S.phase === 'done' && Q.probe === 'height'){ const a = Q.ans(p), yy = Y(a); ctx.strokeStyle = '#7dffc1'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px, yy); ctx.lineTo(W - 20, yy); ctx.stroke(); label(`y = ${f(a)} m`, W - 24, yy - 7, '#7dffc1', 12, 'right'); }
+  return {objPx:cg[1]};
+}
+
 /* ---------- the scenes ---------- */
 // horizontal scenes map metres along the ground to pixels; vertical ones map height
 function hView(xmax){ const x0 = 70, x1 = W - 40; return x => x0 + x / xmax * (x1 - x0); }
@@ -376,47 +489,10 @@ function paint(){
     }
     if (mo.hit && t >= mo.th) label('hits the deer!', X(mo.s(t)), gy - 80, '#ff8b7a', 14);
   } else {
-    // vertical scenes: ball, catch, high jump
-    const peak = Math.max(S.mo.s(S.mo.dur / 2), S.stuMo ? S.stuMo.s(S.stuMo.dur / 2) : 0, sc === 'jump' ? p.bar : 0, S.stu != null && Q.probe === 'height' ? S.stu : 0, sc === 'ball' || sc === 'catch' ? 1.5 : 0);
-    const ymax = Math.max(peak * 1.18, 2.4); Y = vView(ymax, gy);
+    // vertical scenes: the thrower (heights measured up from the release point) and the high jumper (drawn to scale)
     sky(['#4d93d6', '#d6ecf7'], gy, false); hills(gy - 10, '#93b89c', 26, 8);
-    ctx.fillStyle = sc === 'jump' ? '#b5482f' : '#5b8f4f'; ctx.fillRect(0, gy, W, H - gy);
-    // a height pole with markings
-    const px = W * .3; ctx.fillStyle = '#e9eef3'; ctx.fillRect(px - 3, Y(ymax * .98), 6, gy - Y(ymax * .98));
-    let step = .5; for (const s2 of [.25, .5, 1, 2, 5, 10]){ step = s2; if (Y(0) - Y(s2) >= 34) break; }
-    ctx.font = '600 11px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'right';
-    for (let m = 0; m <= ymax * .98 + 1e-9; m += step){ ctx.fillStyle = '#20262d'; ctx.fillRect(px - 8, Y(m) - 1, 16, 2); if (!hidden('scale')){ ctx.fillStyle = '#20262d'; ctx.fillText(`${+m.toFixed(2)} m`, px - 12, Y(m) + 4); } }
-    if (hidden('scale')) label('height markings hidden', px, gy + 26, '#a9b6c2', 11);
-    const bx = W * .58;
-    if (sc === 'jump'){
-      // standards, bar and landing mat
-      for (const sx of [bx - 70, bx + 70]){ ctx.fillStyle = '#c3ccd5'; ctx.fillRect(sx - 3, Y(p.bar + .4), 6, gy - Y(p.bar + .4)); }
-      ctx.fillStyle = '#ffd25e'; ctx.fillRect(bx - 70, Y(p.bar) - 3, 140, 6); label(`bar ${n(p.bar)} m`, bx + 78, Y(p.bar) + 5, '#ffd25e', 12, 'left');
-      ctx.fillStyle = '#2c5fb8'; ctx.fillRect(bx - 60, gy - 24, 180, 24);
-      const y = (S.stuMo || S.mo).s(t), cy = Y(y);
-      // the jumper's body around the center of gravity, arching over the bar near the top
-      ctx.save(); ctx.translate(bx, cy); const arch = clamp(1 - Math.abs((S.mo.v(t)) / p.v0), 0, 1);
-      ctx.strokeStyle = '#ff8a2a'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-26, -8 * arch + 14 * (1 - arch)); ctx.quadraticCurveTo(0, -18 * arch - 6, 26, -8 * arch + 14 * (1 - arch)); ctx.stroke();
-      ctx.fillStyle = '#ff8a2a'; ctx.beginPath(); ctx.arc(-30, -12 * arch + 12 * (1 - arch), 6, 0, 7); ctx.fill();
-      ctx.fillStyle = '#eaf0f4'; ctx.strokeStyle = '#20262d'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, 5, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#20262d'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 5, 0, Math.PI / 2); ctx.fill(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 5, Math.PI, Math.PI * 1.5); ctx.fill();
-      ctx.restore(); label('center of gravity', bx - 40, cy + 22, '#eaf0f4', 10, 'right');
-      objPx = cy;
-    } else {
-      person(bx - 44, gy, 1.2, 0, '#ff8a2a', 'stand');
-      const handY = 1.5 * 0;   // the ball leaves and returns at hand height, drawn at the ground line for simplicity
-      const mo2 = S.stuMo || S.mo, gap = mo2.dur / 10;
-      for (let k = 1; k * gap < t - 1e-6; k++){ ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.beginPath(); ctx.arc(bx - 12 + (k % 2 ? 7 : 0), Y(Math.max(0, mo2.s(k * gap))) - 8, 7, 0, 7); ctx.fill(); }
-      const y = Math.max(handY, mo2.s(Math.min(t, mo2.dur)));
-      const by = Y(y) - 8; const gr2 = ctx.createRadialGradient(bx - 14, by - 3, 1, bx - 12, by, 8); gr2.addColorStop(0, '#fff'); gr2.addColorStop(1, '#e0322a'); ctx.fillStyle = gr2; ctx.beginPath(); ctx.arc(bx - 12, by, 8, 0, 7); ctx.fill();
-      objPx = by;
-      if (sc === 'catch'){ label(`caught at ${n(p.T)} s`, bx + 30, gy - 92, '#eaf0f4', 12, 'left'); }
-    }
-    // predictions and answers
-    if (S.stu != null && S.phase !== 'run1'){
-      if (Q.probe === 'height'){ const yy = Y(S.stu); ctx.strokeStyle = '#ff8a2a'; ctx.lineWidth = 2.5; ctx.setLineDash([8, 5]); ctx.beginPath(); ctx.moveTo(px, yy); ctx.lineTo(W - 20, yy); ctx.stroke(); ctx.setLineDash([]); label('your height', W - 24, yy - 7, '#ff8a2a', 12, 'right'); }
-      if (Q.probe === 'time' && S.stu >= 0){ const yy = S.mo.s(Math.min(S.stu, S.mo.dur)), cy = sc === 'jump' ? Y(yy) : Y(Math.max(0, yy)) - 8; ctx.strokeStyle = '#ff8a2a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(bx + (sc === 'jump' ? 0 : -12), cy, 11, 0, 7); ctx.stroke(); label('at your time', bx + 20, cy + 4, '#ff8a2a', 11, 'left'); }
-    }
-    if (S.reveal && S.phase === 'done' && Q.probe === 'height'){ const a = Q.ans(p), yy = Y(a); ctx.strokeStyle = '#7dffc1'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px, yy); ctx.lineTo(W - 20, yy); ctx.stroke(); label(`${Q.sym.replace(/<[^>]+>/g, '')} = ${f(a)} m`, px + 10, yy + 18, '#7dffc1', 12, 'left'); }
+    const r = sc === 'jump' ? drawJump(Q, p, t, gy) : drawThrow(Q, p, t, gy);
+    objPx = r.objPx;
   }
   /* --- instruments --- */
   const mo3 = S.stuMo || S.mo, vNow = mo3.v(Math.min(t, mo3.dur));

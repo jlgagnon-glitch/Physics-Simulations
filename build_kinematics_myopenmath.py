@@ -24,7 +24,8 @@ DEER = (["$a = -rrand(3,5,0.1)", "$D = rand(18,40)", "$v0 = rrand(9,16,0.1) wher
 TWO = (["$a1 = rrand(1.5,3,0.5)", "$t1 = rand(4,6)", "$a2 = -rrand(1,3,0.5) where ($a1*$t1 + $a2*4 > 0.5)", "$t2 = rand(2,4)"], ["a1", "t1", "a2", "t2"])
 PUCK = (["$v0 = rand(20,35)", "$a = -rrand(0.3,0.8,0.1)", "$D = rand(25,45)", "$t = rrand(1,1.5,0.05)"], ["v0", "a", "D", "t"])
 BALL = (["$v0 = rrand(10,30,0.5)"], ["v0"])
-JUMP = (["$v0 = rrand(3.5,5,0.1)", "$yi = rrand(1,1.3,0.05)", "$bar = rrand(1.9,2.5,0.05)"], ["v0", "yi", "bar"])
+# realistic bars: 1.80-2.40 m (the world record is 2.45 m), within 15 cm of the jumper's peak
+JUMP = (["$v0 = rrand(4,5,0.1)", "$yi = rrand(1,1.2,0.05)", "$bar = rrand(1.8,2.4,0.05) where (abs($bar - ($yi + $v0*$v0/19.6)) <= 0.15)"], ["v0", "yi", "bar"])
 
 # code, name, numbers, answer expression, answer label, unit, question text (MyOpenMath variables)
 QS = [
@@ -59,9 +60,9 @@ QS = [
     ("3.5", "Puck: time to the goal", PUCK, "($v0 - sqrt($v0*$v0 + 2*$a*$D))/(-$a)", "Δt", "s",
      "A hockey puck leaves the stick at <b>$v0 m/s</b> toward a goal <b>$D m</b> away. The ice slows it at <b>$a m/s<sup>2</sup></b>. How long does the puck take to reach the goal?"),
     ("4.1", "Ball thrown up: height", BALL, "$v0*$v0/(2*9.8)", "Δy", "m",
-     "A ball is thrown straight up from ground level at <b>$v0 m/s</b>. How high does it rise?"),
+     "A ball is thrown straight up at <b>$v0 m/s</b>. How high above the release point does it rise?"),
     ("4.2", "Ball thrown up: time of flight", BALL, "2*$v0/9.8", "Δt", "s",
-     "A ball is thrown straight up from ground level at <b>$v0 m/s</b>. How long is it in the air before it returns to the ground?"),
+     "A ball is thrown straight up at <b>$v0 m/s</b>. How long is it in the air before it comes back down to the height it was released from?"),
     ("4.3", "Caught on the way down", (["$T = rrand(1,4,0.1)"], ["T"]), "9.8*$T/2", "v<sub>0</sub>", "m/s",
      "A ball thrown straight up is caught by the thrower, at the same height, <b>$T s</b> later. With what speed was it thrown?"),
     ("4.4", "High jump: peak height", JUMP, "$yi + $v0*$v0/(2*9.8)", "y<sub>peak</sub>", "m",
