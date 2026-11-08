@@ -5,6 +5,18 @@ and the problem statement (same wording as the simulation). Run:  python3 build_
 """
 from pathlib import Path
 
+import re
+
+
+def fix_after_vars(text):
+    """MyOpenMath reads special characters such as ° as part of a variable name, so "$th°" would look for a
+    variable called "th°" and show nothing. Write the degree sign as &deg; after a variable, and refuse
+    any other special character there."""
+    text = re.sub(r'(\$\w+)°', r'\1&deg;', text)
+    bad = re.findall(r'\$\w+[^\x00-\x7f]', text)
+    assert not bad, f'special character right after a variable: {bad}'
+    return text
+
 SITE = "https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html"
 RAD = "$rad = 3.141592653589793/180"
 
@@ -176,5 +188,6 @@ def block(code, name, keys, sym, unit, word, control, story):
 
 
 out = HEAD + "\n".join(block(*lv) for lv in L)
+out = fix_after_vars(out)
 Path(__file__).with_name("proving-ground-myopenmath.md").write_text(out, encoding="utf-8")
 print(f"wrote {len(L)} questions")

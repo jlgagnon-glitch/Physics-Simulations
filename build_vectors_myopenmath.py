@@ -6,6 +6,18 @@ Run:  python3 build_vectors_myopenmath.py
 """
 from pathlib import Path
 
+import re
+
+
+def fix_after_vars(text):
+    """MyOpenMath reads special characters such as ° as part of a variable name, so "$th°" would look for a
+    variable called "th°" and show nothing. Write the degree sign as &deg; after a variable, and refuse
+    any other special character there."""
+    text = re.sub(r'(\$\w+)°', r'\1&deg;', text)
+    bad = re.findall(r'\$\w+[^\x00-\x7f]', text)
+    assert not bad, f'special character right after a variable: {bad}'
+    return text
+
 SITE = "https://jlgagnon-glitch.github.io/Physics-Simulations/vectors.html"
 RAD = "$rad = 3.141592653589793/180"
 DIR_NOTE = "Give the direction in degrees, measured counterclockwise from the +x axis (east), between 0° and 360°."
@@ -246,5 +258,7 @@ def block(d):
             f"**Detailed Solution**\n\n```html\n{soln}\n```\n\n---\n")
 
 
-Path(__file__).with_name("vectors-myopenmath.md").write_text(HEAD + "\n".join(block(d) for d in Q), encoding="utf-8")
+out = HEAD + "\n".join(block(d) for d in Q)
+out = fix_after_vars(out)
+Path(__file__).with_name("vectors-myopenmath.md").write_text(out, encoding="utf-8")
 print(f"wrote {len(Q)} questions")

@@ -64,7 +64,7 @@ $simurl = $simurl . "&launch=$stua0,$stua1" if ($stua0 != "" && $stua1 != "")
 <iframe src="$simurl" title="Vector Range: Solve the triangle" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">The vectors slide tip-to-tail to mark the target. After you submit, your answer is drawn from the origin. Tap to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>A <b>$c m</b> ladder leans against a wall, making a <b>$th°</b> angle with the level ground. How far from the wall is its foot (<i>a</i>), and how high up the wall does it reach (<i>b</i>)?</p>
+<p>A <b>$c m</b> ladder leans against a wall, making a <b>$th&deg;</b> angle with the level ground. How far from the wall is its foot (<i>a</i>), and how high up the wall does it reach (<i>b</i>)?</p>
 <p>Use three significant figures.</p>
 <p>a = $answerbox[0] m</p>
 <p>b = $answerbox[1] m</p>
@@ -156,7 +156,7 @@ $simurl = $simurl . "&launch=$stua0,$stua1" if ($stua0 != "" && $stua1 != "")
 <iframe src="$simurl" title="Vector Range: Components of a force" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">The vectors slide tip-to-tail to mark the target. After you submit, your answer is drawn from the origin. Tap to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>A rope pulls a sled with a force of <b>$F N at $th°</b>, measured counterclockwise from the +x axis. Find the x and y components of the force.</p>
+<p>A rope pulls a sled with a force of <b>$F N at $th&deg;</b>, measured counterclockwise from the +x axis. Find the x and y components of the force.</p>
 <p>Use three significant figures.</p>
 <p>F<sub>x</sub> = $answerbox[0] N</p>
 <p>F<sub>y</sub> = $answerbox[1] N</p>
@@ -255,7 +255,7 @@ $simurl = $simurl . "&launch=$stua0,$stua1" if ($stua0 != "" && $stua1 != "")
 <iframe src="$simurl" title="Vector Range: Scaling a vector" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">The vectors slide tip-to-tail to mark the target. After you submit, your answer is drawn from the origin. Tap to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>Displacement <b>B</b> is <b>$B m at $th°</b>. Find the magnitude and direction of <b>$k B</b>.</p>
+<p>Displacement <b>B</b> is <b>$B m at $th&deg;</b>. Find the magnitude and direction of <b>$k B</b>.</p>
 <p>Give the direction in degrees, measured counterclockwise from the +x axis (east), between 0° and 360°.</p>
 <p>Use three significant figures.</p>
 <p>|kB| = $answerbox[0] m &nbsp; at &nbsp; θ = $answerbox[1] °</p>
@@ -361,7 +361,7 @@ $simurl = $simurl . "&launch=$stua0,$stua1" if ($stua0 != "" && $stua1 != "")
 <iframe src="$simurl" title="Vector Range: Two ropes on a box" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">The vectors slide tip-to-tail to mark the target. After you submit, your answer is drawn from the origin. Tap to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>Two ropes pull on a box: <b>F₁ = $F1 N at $a1°</b> and <b>F₂ = $F2 N at $a2°</b>. Find the magnitude and direction of the net force.</p>
+<p>Two ropes pull on a box: <b>F₁ = $F1 N at $a1&deg;</b> and <b>F₂ = $F2 N at $a2&deg;</b>. Find the magnitude and direction of the net force.</p>
 <p>Give the direction in degrees, measured counterclockwise from the +x axis (east), between 0° and 360°.</p>
 <p>Use three significant figures.</p>
 <p>F<sub>net</sub> = $answerbox[0] N &nbsp; at &nbsp; θ = $answerbox[1] °</p>
@@ -522,7 +522,7 @@ $simurl = $simurl . "&launch=$stua0,$stua1" if ($stua0 != "" && $stua1 != "")
 <iframe src="$simurl" title="Vector Range: Two-leg hike" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">The vectors slide tip-to-tail to mark the target. After you submit, your answer is drawn from the origin. Tap to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>A hiker walks <b>$d1 m at $t1° N of E</b>, then <b>$d2 m at $t2° N of W</b>. Find the hiker's total displacement.</p>
+<p>A hiker walks <b>$d1 m at $t1&deg; N of E</b>, then <b>$d2 m at $t2&deg; N of W</b>. Find the hiker's total displacement.</p>
 <p>Give the direction in degrees, measured counterclockwise from the +x axis (east), between 0° and 360°.</p>
 <p>Use three significant figures.</p>
 <p>d = $answerbox[0] m &nbsp; at &nbsp; θ = $answerbox[1] °</p>
@@ -575,7 +575,7 @@ $simurl = $simurl . "&launch=$stua0,$stua1" if ($stua0 != "" && $stua1 != "")
 <iframe src="$simurl" title="Vector Range: Plane in a crosswind" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">The vectors slide tip-to-tail to mark the target. After you submit, your answer is drawn from the origin. Tap to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>An airplane flies at <b>$vp km/h at $a°</b> relative to the air. The wind blows at <b>$w km/h toward $aw°</b>. Find the plane's velocity relative to the ground.</p>
+<p>An airplane flies at <b>$vp km/h at $a&deg;</b> relative to the air. The wind blows at <b>$w km/h toward $aw&deg;</b>. Find the plane's velocity relative to the ground.</p>
 <p>Give the direction in degrees, measured counterclockwise from the +x axis (east), between 0° and 360°.</p>
 <p>Use three significant figures.</p>
 <p>v<sub>ground</sub> = $answerbox[0] km/h &nbsp; at &nbsp; θ = $answerbox[1] °</p>
@@ -626,7 +626,7 @@ $simurl = $simurl . "&launch=$stua0,$stua1" if ($stua0 != "" && $stua1 != "")
 <iframe src="$simurl" title="Vector Range: Three forces: components" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">The vectors slide tip-to-tail to mark the target. After you submit, your answer is drawn from the origin. Tap to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>Three forces act on a crate: <b>F₁ = $F1 N at $a1°</b>, <b>F₂ = $F2 N at $a2°</b>, and <b>F₃ = $F3 N at 270°</b>. Find the x and y components of the net force.</p>
+<p>Three forces act on a crate: <b>F₁ = $F1 N at $a1&deg;</b>, <b>F₂ = $F2 N at $a2&deg;</b>, and <b>F₃ = $F3 N at 270°</b>. Find the x and y components of the net force.</p>
 <p>Use three significant figures.</p>
 <p>F<sub>net,x</sub> = $answerbox[0] N</p>
 <p>F<sub>net,y</sub> = $answerbox[1] N</p>
@@ -680,7 +680,7 @@ $simurl = $simurl . "&launch=$stua0,$stua1" if ($stua0 != "" && $stua1 != "")
 <iframe src="$simurl" title="Vector Range: Three forces: net force" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">The vectors slide tip-to-tail to mark the target. After you submit, your answer is drawn from the origin. Tap to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>Three forces act on a crate: <b>F₁ = $F1 N at $a1°</b>, <b>F₂ = $F2 N at $a2°</b>, and <b>F₃ = $F3 N at 270°</b>. Find the magnitude and direction of the net force.</p>
+<p>Three forces act on a crate: <b>F₁ = $F1 N at $a1&deg;</b>, <b>F₂ = $F2 N at $a2&deg;</b>, and <b>F₃ = $F3 N at 270°</b>. Find the magnitude and direction of the net force.</p>
 <p>Give the direction in degrees, measured counterclockwise from the +x axis (east), between 0° and 360°.</p>
 <p>Use three significant figures.</p>
 <p>F<sub>net</sub> = $answerbox[0] N &nbsp; at &nbsp; θ = $answerbox[1] °</p>
@@ -739,7 +739,7 @@ $simurl = $simurl . "&launch=$stua0,$stua1" if ($stua0 != "" && $stua1 != "")
 <iframe src="$simurl" title="Vector Range: Four ropes on a ring" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">The vectors slide tip-to-tail to mark the target. After you submit, your answer is drawn from the origin. Tap to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>Four people pull on ropes tied to a steel ring: <b>F₁ = $F1 N</b> at $t1° above the +x axis, <b>F₂ = $F2 N</b> at $t2° above the −x axis, <b>F₃ = $F3 N</b> at $t3° below the −x axis, and <b>F₄ = $F4 N</b> at $t4° below the +x axis. Find the net force on the ring.</p>
+<p>Four people pull on ropes tied to a steel ring: <b>F₁ = $F1 N</b> at $t1&deg; above the +x axis, <b>F₂ = $F2 N</b> at $t2&deg; above the −x axis, <b>F₃ = $F3 N</b> at $t3&deg; below the −x axis, and <b>F₄ = $F4 N</b> at $t4&deg; below the +x axis. Find the net force on the ring.</p>
 <p>Give the direction in degrees, measured counterclockwise from the +x axis (east), between 0° and 360°.</p>
 <p>Use three significant figures.</p>
 <p>F<sub>net</sub> = $answerbox[0] N &nbsp; at &nbsp; θ = $answerbox[1] °</p>
@@ -795,7 +795,7 @@ $simurl = $simurl . "&launch=$stua0,$stua1" if ($stua0 != "" && $stua1 != "")
 <iframe src="$simurl" title="Vector Range: Orienteering" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">The vectors slide tip-to-tail to mark the target. After you submit, your answer is drawn from the origin. Tap to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>In an orienteering race you run <b>$d1 m due north</b>, then <b>$d2 m at $t2° S of E</b>, then <b>$d3 m at $t3° N of W</b>. Find your displacement from the start.</p>
+<p>In an orienteering race you run <b>$d1 m due north</b>, then <b>$d2 m at $t2&deg; S of E</b>, then <b>$d3 m at $t3&deg; N of W</b>. Find your displacement from the start.</p>
 <p>Give the direction in degrees, measured counterclockwise from the +x axis (east), between 0° and 360°.</p>
 <p>Use three significant figures.</p>
 <p>d = $answerbox[0] m &nbsp; at &nbsp; θ = $answerbox[1] °</p>
@@ -900,7 +900,7 @@ $simurl = $simurl . "&launch=$stua0,$stua1" if ($stua0 != "" && $stua1 != "")
 <iframe src="$simurl" title="Vector Range: Change in position" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">The vectors slide tip-to-tail to mark the target. After you submit, your answer is drawn from the origin. Tap to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>A delivery drone is <b>$r1 m from its base at $a1°</b>. Later it is <b>$r2 m from the base at $a2°</b>. Find its displacement Δr = r<sub>f</sub> − r<sub>i</sub>.</p>
+<p>A delivery drone is <b>$r1 m from its base at $a1&deg;</b>. Later it is <b>$r2 m from the base at $a2&deg;</b>. Find its displacement Δr = r<sub>f</sub> − r<sub>i</sub>.</p>
 <p>Give the direction in degrees, measured counterclockwise from the +x axis (east), between 0° and 360°.</p>
 <p>Use three significant figures.</p>
 <p>Δr = $answerbox[0] m &nbsp; at &nbsp; θ = $answerbox[1] °</p>
@@ -1003,7 +1003,7 @@ $simurl = $simurl . "&launch=$stua0,$stua1" if ($stua0 != "" && $stua1 != "")
 <iframe src="$simurl" title="Vector Range: Racquetball rebound" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">The vectors slide tip-to-tail to mark the target. After you submit, your answer is drawn from the origin. Tap to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>A racquetball moving at <b>$v m/s</b> hits a wall on its right at <b>$al°</b> to the wall. It rebounds at the same speed and the same $al° angle to the wall. Find the change in velocity Δv = v<sub>f</sub> − v<sub>i</sub>.</p>
+<p>A racquetball moving at <b>$v m/s</b> hits a wall on its right at <b>$al&deg;</b> to the wall. It rebounds at the same speed and the same $al&deg; angle to the wall. Find the change in velocity Δv = v<sub>f</sub> − v<sub>i</sub>.</p>
 <p>Give the direction in degrees, measured counterclockwise from the +x axis (east), between 0° and 360°.</p>
 <p>Use three significant figures.</p>
 <p>Δv = $answerbox[0] m/s &nbsp; at &nbsp; θ = $answerbox[1] °</p>
@@ -1055,7 +1055,7 @@ $simurl = $simurl . "&launch=$stua0,$stua1" if ($stua0 != "" && $stua1 != "")
 <iframe src="$simurl" title="Vector Range: Rounding the corner" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">The vectors slide tip-to-tail to mark the target. After you submit, your answer is drawn from the origin. Tap to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>A runner moving <b>east at $v1 m/s</b> rounds a corner and ends up moving at <b>$v2 m/s at $af°</b>. Find the change in velocity Δv = v<sub>f</sub> − v<sub>i</sub>.</p>
+<p>A runner moving <b>east at $v1 m/s</b> rounds a corner and ends up moving at <b>$v2 m/s at $af&deg;</b>. Find the change in velocity Δv = v<sub>f</sub> − v<sub>i</sub>.</p>
 <p>Give the direction in degrees, measured counterclockwise from the +x axis (east), between 0° and 360°.</p>
 <p>Use three significant figures.</p>
 <p>Δv = $answerbox[0] m/s &nbsp; at &nbsp; θ = $answerbox[1] °</p>

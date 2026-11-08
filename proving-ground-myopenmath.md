@@ -157,7 +157,7 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 <iframe src="$simurl" title="Physics Proving Ground: Fixed angle" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">The simulation shows a correct launch, with the answer hidden. After you submit, it also shows your launch. Tap it to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>A launcher is locked at $th° above level ground. The target is $R m away at launcher height. What launch speed reaches it?</p>
+<p>A launcher is locked at $th&deg; above level ground. The target is $R m away at launcher height. What launch speed reaches it?</p>
 <p>Use g = 9.8 m/s². Enter the launch speed in m/s, to three significant figures.</p>
 <p>v = $answerbox m/s</p>
 ```
@@ -283,7 +283,7 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 <iframe src="$simurl" title="Physics Proving Ground: Steady up the ramp" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">The simulation shows a correct launch, with the answer hidden. After you submit, it also shows your launch. Tap it to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>A $m kg crate enters a $th° ramp at $v0 m/s. The ramp has friction coefficient μ = $mu. What rope force, parallel to the ramp, keeps the crate moving at constant speed all the way up?</p>
+<p>A $m kg crate enters a $th&deg; ramp at $v0 m/s. The ramp has friction coefficient μ = $mu. What rope force, parallel to the ramp, keeps the crate moving at constant speed all the way up?</p>
 <p>Use g = 9.8 m/s². Enter the rope force in N, to three significant figures.</p>
 <p>F = $answerbox N</p>
 ```
@@ -367,7 +367,7 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 <iframe src="$simurl" title="Physics Proving Ground: Up to the latch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">The simulation shows a correct launch, with the answer hidden. After you submit, it also shows your launch. Tap it to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>A puck is shot up a $th° ramp with friction coefficient μ = $mu. A latch $L m along the ramp catches it only if it stops right there. What starting speed does it need?</p>
+<p>A puck is shot up a $th&deg; ramp with friction coefficient μ = $mu. A latch $L m along the ramp catches it only if it stops right there. What starting speed does it need?</p>
 <p>Use g = 9.8 m/s². Enter the starting speed in m/s, to three significant figures.</p>
 <p>v = $answerbox m/s</p>
 ```
