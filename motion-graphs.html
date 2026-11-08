@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Motion Graphs Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=IBM+Plex+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Same look as the other simulations: the lab bench and graph on the left, the question on the right. */
+:root{
+  --paper:#18212b; --sheet:#222e3b; --rule:#3d4d5e; --ink:#eaf0f4; --muted:#a9b6c2;
+  --safety:#ff8a2a; --hit:#7dffc1; --miss:#ff8b7a; --field:#0f161e; --on-safety:#20140a;
+  --f-display:"Saira Stencil One", Impact, sans-serif; --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif; --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--f-body); font-size:16px; line-height:1.45}
+button,input{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--safety); outline-offset:2px}
+.app{height:100%; display:grid; grid-template-rows:auto minmax(0,1fr); grid-template-columns:minmax(0,1fr) 370px; gap:10px 16px;
+  padding-block:10px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px))}
+header{grid-column:1 / -1; display:flex; flex-wrap:wrap; align-items:center; gap:6px 18px}
+h1{margin:0; font-family:var(--f-display); font-weight:400; font-size:30px; line-height:1; letter-spacing:.02em}
+.nav{display:flex; flex-wrap:wrap; gap:6px 14px; flex:1; min-width:0}
+.group{display:flex; align-items:center; gap:3px; flex-wrap:wrap}
+.group > span{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-right:3px}
+.lv{min-width:34px; height:34px; border:1px solid var(--rule); background:var(--sheet); border-radius:3px; cursor:pointer; font-family:var(--f-mono); font-size:14px; font-weight:600; padding:0}
+.lv.cur{background:var(--ink); color:var(--sheet); border-color:var(--ink)}
+.lv.done{border-color:var(--hit); box-shadow:inset 0 -3px 0 var(--hit)}
+.lv.cur.done{box-shadow:inset 0 -3px 0 #0f7a4d}
+.total{font-family:var(--f-mono); font-size:14px; font-weight:600; white-space:nowrap}
+.range{min-width:0; min-height:0; display:flex; align-items:flex-start; justify-content:center}
+#scene{display:block; border:1px solid var(--rule); border-radius:4px; background:var(--field); max-width:100%}
+.test{min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-bottom:6px}
+.sheet{background:var(--sheet); border:1px solid var(--rule); padding:12px 14px; display:flex; flex-direction:column; gap:8px}
+.tag{font-family:var(--f-mono); font-size:13px; font-weight:600; color:var(--safety)}
+h2{margin:0; font-size:20px; line-height:1.2}
+.story{margin:0}
+.story b{font-family:var(--f-mono); font-weight:600}
+.entry{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.entry label{font-family:var(--f-mono); font-weight:600}
+#ans{width:7.5em; font-family:var(--f-mono); font-weight:600; font-size:18px; padding:7px 8px; background:var(--field); border:2px solid var(--safety); border-radius:2px; color:var(--ink)}
+.u{font-family:var(--f-mono); color:var(--muted)}
+.btn{border:1px solid var(--ink); background:transparent; padding:9px 13px; font-weight:700; cursor:pointer; border-radius:2px}
+.btn.go{background:var(--safety); border-color:var(--safety); color:var(--on-safety)}
+.btn:disabled{opacity:.45; cursor:default}
+.row{display:flex; flex-wrap:wrap; gap:8px}
+.err{margin:0; color:var(--miss); font-weight:700; font-size:15px}
+.note{margin:0; font-size:14.5px; color:var(--muted)}
+.label{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted)}
+.result{font-weight:700; font-size:17px; margin:0}
+.result.hit{color:var(--hit)} .result.miss{color:var(--miss)}
+.steps{margin:0; padding-left:20px; display:flex; flex-direction:column; gap:4px; font-size:15px}
+.steps .m{font-family:var(--f-mono); font-size:14.5px}
+.app.locked .nav, .app.locked .total{display:none}
+.app.locked h1{font-size:22px}
+html.bare, html.bare body{height:auto}
+.app.bare{height:auto; grid-template-columns:minmax(0,1fr); grid-template-rows:auto}
+.app.bare header, .app.bare .test{display:none}
+.app.bare .range{display:block}
+@media (max-width:900px){
+  html,body{height:auto}
+  .app{grid-template-columns:minmax(0,1fr); grid-template-rows:none; height:auto}
+  .test{overflow:visible}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <h1>Motion Graphs Lab</h1>
+    <nav class="nav" id="nav" aria-label="Questions"></nav>
+    <div class="total" id="total"></div>
+  </header>
+  <section class="range" id="range"><canvas id="scene" role="img" aria-label="A cart on a track with its motion graph"></canvas></section>
+  <aside class="test">
+    <section class="sheet">
+      <div class="tag" id="tag"></div>
+      <h2 id="qName"></h2>
+      <p class="story" id="story"></p>
+      <form class="entry" id="form" autocomplete="off">
+        <label for="ans" id="ansLabel"></label>
+        <input id="ans" type="text" inputmode="decimal" autocomplete="off">
+        <span class="u" id="ansUnit"></span>
+        <button class="btn go" id="btnGo" type="submit">Run</button>
+      </form>
+      <p class="err" id="errMsg" hidden></p>
+      <p class="note">Read the graph, work out your answer, then run the cart. The graph's time cursor moves with the cart, and ghost images mark each whole second. Use three significant figures.</p>
+    </section>
+    <section class="sheet" id="debrief" hidden>
+      <p class="result" id="resultLine"></p>
+      <div id="stepsBox" hidden><div class="label">Worked solution</div><ol class="steps" id="steps"></ol></div>
+      <div class="row">
+        <button class="btn" id="btnSolve" type="button">Show worked solution</button>
+        <button class="btn" id="btnFresh" type="button">New graph</button>
+        <button class="btn go" id="btnNext" type="button" hidden>Next question</button>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const until = (make, ok) => { for (let k = 0; k < 20000; k++){ const v = make(); if (ok(v)) return v; } throw new Error('no valid numbers'); };
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const minus = s => String(s).replace(/^-/, '−');
+const f = x => { if (!isFinite(x)) return '∞'; if (Math.abs(x) < 5e-10) return '0'; const a = Math.abs(x); return minus(a >= 100 ? x.toFixed(0) : a >= 10 ? x.toFixed(1) : a >= 1 ? x.toFixed(2) : x.toFixed(3)); };
+const n = x => minus(+x.toFixed(4));   // a graph value as written in a solution: 2.5, −3
+// value of a broken-line graph through points [[t, y], ...] at time t
+const lin = (pts, t) => { if (t <= pts[0][0]) return pts[0][1]; for (let i = 1; i < pts.length; i++) if (t <= pts[i][0]){ const [t0, y0] = pts[i - 1], [t1, y1] = pts[i]; return y0 + (y1 - y0) * (t - t0) / (t1 - t0); } return pts[pts.length - 1][1]; };
+const T_END = 8;
+
+/* ---------- the four graph shapes (after Lecture 6, Examples 1, 3, 5 and 7) ---------- */
+const SHAPES = {
+  // Ex. 1: forward, rest, fast backward, rest, slowly forward
+  X1:{graph:'x', gen:() => { const a = ri(0, 2), b = a + ri(2, 4), c = until(() => b - ri(3, 5), c => c !== a && b + c !== 0); return {a, b, c, d:c + ri(1, 2)}; },
+      pts:p => [[0, p.a], [2, p.b], [4, p.b], [5, p.c], [6, p.c], [8, p.d]]},
+  // Ex. 3: speeding up from rest (curved), then straight pieces
+  X2:{graph:'x', gen:() => { const v2 = ri(2, 4), s1 = pick([0, .5, 1]), x4 = v2 + 2 * s1, x6 = until(() => x4 - ri(5, 8), x => x !== 0); return {v2, s1, x6, x8:until(() => x6 + ri(1, 2), x8 => x6 + x8 !== 0)}; },
+      fn:p => t => t <= 2 ? p.v2 / 4 * t * t : lin([[2, p.v2], [4, p.v2 + 2 * p.s1], [6, p.x6], [8, p.x8]], t),
+      pts:p => [[2, p.v2], [4, p.v2 + 2 * p.s1], [6, p.x6], [8, p.x8]]},
+  // Ex. 5: always moving forward, then stopping
+  V1:{graph:'v', gen:() => { const q = ri(1, 2); return {p:q + ri(1, 2), q, r:q + ri(1, 3)}; },
+      pts:p => [[0, p.p], [1, p.q], [3, p.q], [5, p.r], [7, 0], [8, 0]]},
+  // Ex. 7: forward, turning around, backward, turning around again
+  V2:{graph:'v', gen:() => { const p = ri(2, 4), q = ri(1, p - 1), m = ri(2, 4); return {p, q, m, n:until(() => ri(1, 3), n => n !== p && (p + q) / 2 + 2 * q - 4 * m + n !== 0)}; },
+      pts:p => [[0, p.p], [1, p.q], [2, p.q], [4, -p.m], [6, -p.m], [8, p.n]]},
+};
+const fnOf = (sh, p) => SHAPES[sh].fn ? SHAPES[sh].fn(p) : (t => lin(SHAPES[sh].pts(p), t));
+const V2areas = p => { const t1 = 2 * p.q / (p.q + p.m), t2 = 2 * p.m / (p.m + p.n); return {t1, t2, disp:(p.p + p.q) / 2 + 2 * p.q - 4 * p.m + p.n, dist:(p.p + p.q) / 2 + p.q + p.q * t1 / 2 + p.m * (2 - t1) / 2 + 2 * p.m + p.m * t2 / 2 + p.n * (2 - t2) / 2}; };
+
+/* ---------- the 20 questions ---------- */
+const CHAPTERS = ['Position graphs', 'Curved position', 'Velocity graphs', 'Turning around'];
+const XQ = 'Use the cart\'s <b>position vs. time</b> graph.', VQ = 'Use the cart\'s <b>velocity vs. time</b> graph.';
+const QS = [
+{ch:0, shape:'X1', name:'Reading position', sym:'x', unit:'m', probe:{kind:'point', t:4.5},
+  story:() => `${XQ} What is the cart's position at <b>t = 4.5 s</b>?`, ans:p => (p.b + p.c) / 2,
+  steps:p => [`At 4.5 s the cart is halfway along the straight piece from (4 s, ${n(p.b)} m) to (5 s, ${n(p.c)} m).`, `Read the graph: <span class="m">x(4.5) = (${n(p.b)} + ${n(p.c)})/2 = ${f((p.b + p.c) / 2)} m</span>`]},
+{ch:0, shape:'X1', name:'Velocity from slope', sym:'v', unit:'m/s', probe:{kind:'slope', t:1},
+  story:() => `${XQ} What is the cart's velocity at <b>t = 1 s</b>?`, ans:p => (p.b - p.a) / 2,
+  steps:p => [`Velocity is the slope of the x vs. t graph. From 0 to 2 s the graph is a straight line.`, `<span class="m">v = Δx/Δt = (${n(p.b)} − ${n(p.a)})/(2 − 0) = ${f((p.b - p.a) / 2)} m/s</span>`]},
+{ch:0, shape:'X1', name:'Greatest speed', sym:'speed', unit:'m/s', probe:{kind:'slope', t:4.5, speed:true},
+  story:() => `${XQ} What is the cart's greatest speed during the 8 s?`, ans:p => p.b - p.c,
+  steps:p => [`Speed is the size of the slope, so look for the steepest piece: 4–5 s.`, `<span class="m">v = (${n(p.c)} − ${n(p.b)})/(5 − 4) = ${f(p.c - p.b)} m/s</span>`, `Speed is the magnitude: <span class="m">${f(p.b - p.c)} m/s</span> (the cart is moving backward).`]},
+{ch:0, shape:'X1', name:'Average velocity', sym:'v<sub>ave</sub>', unit:'m/s', probe:{kind:'chord', t1:0, t2:5},
+  story:() => `${XQ} What is the cart's average velocity from <b>t = 0 s</b> to <b>t = 5 s</b>?`, ans:p => (p.c - p.a) / 5,
+  steps:p => [`Average velocity is the slope of the straight line joining the two points.`, `<span class="m">v<sub>ave</sub> = (x(5) − x(0))/(5 − 0) = (${n(p.c)} − ${n(p.a)})/5 = ${f((p.c - p.a) / 5)} m/s</span>`]},
+{ch:0, shape:'X1', name:'Total distance', sym:'d', unit:'m', probe:{kind:'dist', t1:0, t2:8},
+  story:() => `${XQ} What total distance does the cart travel from <b>t = 0 s</b> to <b>t = 8 s</b>?`, ans:p => (p.b - p.a) + (p.b - p.c) + (p.d - p.c),
+  steps:p => [`Distance adds up every leg, forward or backward. Rest intervals add nothing.`, `<span class="m">d = |${n(p.b)} − ${n(p.a)}| + |${n(p.c)} − ${n(p.b)}| + |${n(p.d)} − ${n(p.c)}| = ${n(p.b - p.a)} + ${n(p.b - p.c)} + ${n(p.d - p.c)} = ${f((p.b - p.a) + (p.b - p.c) + (p.d - p.c))} m</span>`]},
+
+{ch:1, shape:'X2', name:'Tangent line', sym:'v', unit:'m/s', probe:{kind:'slope', t:1}, tangent:p => [[.5, 0], [2.5, p.v2]],
+  story:() => `${XQ} The dashed line is tangent to the curve at <b>t = 1 s</b>. What is the cart's velocity at t = 1 s?`, ans:p => p.v2 / 2,
+  steps:p => [`On a curve, the velocity is the slope of the tangent line at that instant.`, `Read two points on the tangent line: (0.5 s, 0 m) and (2.5 s, ${n(p.v2)} m).`, `<span class="m">v(1) = (${n(p.v2)} − 0)/(2.5 − 0.5) = ${f(p.v2 / 2)} m/s</span>`]},
+{ch:1, shape:'X2', name:'Straight-line velocity', sym:'v', unit:'m/s', probe:{kind:'slope', t:5},
+  story:() => `${XQ} What is the cart's velocity at <b>t = 5 s</b>?`, ans:p => (p.x6 - (p.v2 + 2 * p.s1)) / 2,
+  steps:p => { const x4 = p.v2 + 2 * p.s1; return [`From 4 s to 6 s the graph is a straight line, so the velocity is its slope.`, `<span class="m">v = (${n(p.x6)} − ${n(x4)})/(6 − 4) = ${f((p.x6 - x4) / 2)} m/s</span>`]; }},
+{ch:1, shape:'X2', name:'Average velocity', sym:'v<sub>ave</sub>', unit:'m/s', probe:{kind:'chord', t1:0, t2:6},
+  story:() => `${XQ} What is the cart's average velocity from <b>t = 0 s</b> to <b>t = 6 s</b>?`, ans:p => p.x6 / 6,
+  steps:p => [`<span class="m">v<sub>ave</sub> = (x(6) − x(0))/(6 − 0) = (${n(p.x6)} − 0)/6 = ${f(p.x6 / 6)} m/s</span>`]},
+{ch:1, shape:'X2', name:'Reading position', sym:'x', unit:'m', probe:{kind:'point', t:7},
+  story:() => `${XQ} What is the cart's position at <b>t = 7 s</b>?`, ans:p => (p.x6 + p.x8) / 2,
+  steps:p => [`At 7 s the cart is halfway along the straight piece from (6 s, ${n(p.x6)} m) to (8 s, ${n(p.x8)} m).`, `<span class="m">x(7) = (${n(p.x6)} + ${n(p.x8)})/2 = ${f((p.x6 + p.x8) / 2)} m</span>`]},
+{ch:1, shape:'X2', name:'Acceleration from a curve', sym:'a', unit:'m/s²', probe:{kind:'slope', t:2, scale:2, left:true},
+  story:p => `${XQ} The cart starts from rest and speeds up steadily from 0 to 2 s, reaching the position shown at t = 2 s. What is its acceleration during those 2 s?`, ans:p => p.v2 / 2,
+  steps:p => [`Starting from rest with constant acceleration: <span class="m">x = ½at²</span>`, `At 2 s: <span class="m">${n(p.v2)} = ½a(2)²</span>`, `<span class="m">a = 2·${n(p.v2)}/4 = ${f(p.v2 / 2)} m/s²</span>`, `Check: the tangent slope at 2 s is v = at = ${f(p.v2)} m/s.`]},
+
+{ch:2, shape:'V1', name:'Reading velocity', sym:'v', unit:'m/s', probe:{kind:'point', t:4},
+  story:() => `${VQ} What is the cart's velocity at <b>t = 4 s</b>?`, ans:p => (p.q + p.r) / 2,
+  steps:p => [`Read the velocity straight off the graph. At 4 s it is halfway from ${n(p.q)} m/s (3 s) to ${n(p.r)} m/s (5 s).`, `<span class="m">v(4) = (${n(p.q)} + ${n(p.r)})/2 = ${f((p.q + p.r) / 2)} m/s</span>`]},
+{ch:2, shape:'V1', name:'Acceleration from slope', sym:'a', unit:'m/s²', probe:{kind:'slope', t:6},
+  story:() => `${VQ} What is the cart's acceleration at <b>t = 6 s</b>?`, ans:p => -p.r / 2,
+  steps:p => [`Acceleration is the slope of the v vs. t graph. From 5 s to 7 s it is a straight line.`, `<span class="m">a = (0 − ${n(p.r)})/(7 − 5) = ${f(-p.r / 2)} m/s²</span>`]},
+{ch:2, shape:'V1', name:'Displacement as area', sym:'Δx', unit:'m', probe:{kind:'area', t1:0, t2:5},
+  story:() => `${VQ} What is the cart's displacement from <b>t = 0 s</b> to <b>t = 5 s</b>?`, ans:p => (p.p + p.q) / 2 + 2 * p.q + (p.q + p.r),
+  steps:p => [`Displacement is the area under the v vs. t graph.`, `0–1 s (trapezoid): <span class="m">½(${n(p.p)} + ${n(p.q)})(1) = ${f((p.p + p.q) / 2)} m</span>`, `1–3 s (rectangle): <span class="m">${n(p.q)} × 2 = ${f(2 * p.q)} m</span>`, `3–5 s (trapezoid): <span class="m">½(${n(p.q)} + ${n(p.r)})(2) = ${f(p.q + p.r)} m</span>`, `<span class="m">Δx = ${f((p.p + p.q) / 2 + 2 * p.q + p.q + p.r)} m</span>`]},
+{ch:2, shape:'V1', name:'Greatest acceleration', sym:'a', unit:'m/s²', probe:{kind:'slope', t:4},
+  story:() => `${VQ} What is the cart's greatest positive acceleration?`, ans:p => (p.r - p.q) / 2,
+  steps:p => [`The only rising piece of the graph is 3–5 s, so that is where the acceleration is positive.`, `<span class="m">a = (${n(p.r)} − ${n(p.q)})/(5 − 3) = ${f((p.r - p.q) / 2)} m/s²</span>`]},
+{ch:2, shape:'V1', name:'Whole-trip displacement', sym:'Δx', unit:'m', probe:{kind:'area', t1:0, t2:8},
+  story:() => `${VQ} What is the cart's displacement from <b>t = 0 s</b> to <b>t = 8 s</b>?`, ans:p => (p.p + p.q) / 2 + 2 * p.q + (p.q + p.r) + p.r,
+  steps:p => [`Add the areas under the graph: 0–5 s gives <span class="m">${f((p.p + p.q) / 2 + 2 * p.q + p.q + p.r)} m</span>.`, `5–7 s (triangle): <span class="m">½(2)(${n(p.r)}) = ${f(p.r)} m</span>. From 7–8 s the cart is at rest.`, `<span class="m">Δx = ${f((p.p + p.q) / 2 + 2 * p.q + p.q + 2 * p.r)} m</span>`]},
+
+{ch:3, shape:'V2', name:'Momentarily at rest', sym:'t', unit:'s', probe:{kind:'time'},
+  story:() => `${VQ} At what time does the cart first come to rest (for an instant)?`, ans:p => 2 + V2areas(p).t1,
+  steps:p => { const t1 = V2areas(p).t1; return [`The cart is at rest where v = 0, where the graph crosses the time axis.`, `From 2 s to 4 s the velocity falls from ${n(p.q)} to ${n(-p.m)} m/s, a drop of ${n(p.q + p.m)} m/s in 2 s.`, `It reaches zero after <span class="m">${n(p.q)}/${n(p.q + p.m)} × 2 = ${f(t1)} s</span>, so at <span class="m">t = 2 + ${f(t1)} = ${f(2 + t1)} s</span>`]; }},
+{ch:3, shape:'V2', name:'Turning around', sym:'a', unit:'m/s²', probe:{kind:'slope', t:3},
+  story:() => `${VQ} What is the cart's acceleration at <b>t = 3 s</b>?`, ans:p => (-p.m - p.q) / 2,
+  steps:p => [`Acceleration is the slope of the v vs. t graph. From 2 s to 4 s:`, `<span class="m">a = (${n(-p.m)} − ${n(p.q)})/(4 − 2) = ${f((-p.m - p.q) / 2)} m/s²</span>`, `The acceleration is the same before, at and after the instant the cart turns around.`]},
+{ch:3, shape:'V2', name:'Negative area', sym:'Δx', unit:'m', probe:{kind:'area', t1:0, t2:8},
+  story:() => `${VQ} What is the cart's displacement from <b>t = 0 s</b> to <b>t = 8 s</b>?`, ans:p => V2areas(p).disp,
+  steps:p => [`Area above the time axis counts as positive, area below as negative.`, `0–1 s: <span class="m">½(${n(p.p)} + ${n(p.q)}) = ${f((p.p + p.q) / 2)} m</span>; 1–2 s: <span class="m">${n(p.q)} m</span>`, `2–4 s: <span class="m">½(${n(p.q)} + ${n(-p.m)})(2) = ${f(p.q - p.m)} m</span>; 4–6 s: <span class="m">${n(-p.m)} × 2 = ${f(-2 * p.m)} m</span>`, `6–8 s: <span class="m">½(${n(-p.m)} + ${n(p.n)})(2) = ${f(p.n - p.m)} m</span>`, `<span class="m">Δx = ${f(V2areas(p).disp)} m</span>`]},
+{ch:3, shape:'V2', name:'Total distance', sym:'d', unit:'m', probe:{kind:'dist', t1:0, t2:8},
+  story:() => `${VQ} What total distance does the cart travel from <b>t = 0 s</b> to <b>t = 8 s</b>?`, ans:p => V2areas(p).dist,
+  steps:p => { const {t1, t2, dist} = V2areas(p); return [`Distance counts every area as positive, so split the graph where it crosses the axis (at ${f(2 + t1)} s and ${f(6 + t2)} s).`, `Forward: <span class="m">${f((p.p + p.q) / 2)} + ${n(p.q)} + ½(${f(t1)})(${n(p.q)}) = ${f((p.p + p.q) / 2 + p.q + p.q * t1 / 2)} m</span>`, `Backward: <span class="m">½(${f(2 - t1)})(${n(p.m)}) + 2(${n(p.m)}) + ½(${f(t2)})(${n(p.m)}) = ${f(p.m * (2 - t1) / 2 + 2 * p.m + p.m * t2 / 2)} m</span>`, `Forward again: <span class="m">½(${f(2 - t2)})(${n(p.n)}) = ${f(p.n * (2 - t2) / 2)} m</span>`, `<span class="m">d = ${f(dist)} m</span>`]; }},
+{ch:3, shape:'V2', name:'Average acceleration', sym:'a<sub>ave</sub>', unit:'m/s²', probe:{kind:'chord', t1:0, t2:8},
+  story:() => `${VQ} What is the cart's average acceleration from <b>t = 0 s</b> to <b>t = 8 s</b>?`, ans:p => (p.n - p.p) / 8,
+  steps:p => [`Average acceleration is the slope of the line joining the start and end of the velocity graph.`, `<span class="m">a<sub>ave</sub> = (${n(p.n)} − ${n(p.p)})/(8 − 0) = ${f((p.n - p.p) / 8)} m/s²</span>`]},
+];
+const CODES = QS.map((q, i) => `${q.ch + 1}.${i - QS.findIndex(x => x.ch === q.ch) + 1}`);
+for (const q of QS) q.gen = SHAPES[q.shape].gen;
+
+/* ---------- link settings ---------- */
+const URLQ = new URLSearchParams(location.search);
+const LINK = (() => {
+  const raw = (URLQ.get('level') || '').trim(); if (!raw) return null;   // 'level', because q is one of the graph's numbers
+  let i = CODES.indexOf(raw); if (i < 0 && /^\d+$/.test(raw)) i = +raw - 1;
+  if (!QS[i]) return null;
+  const p = QS[i].gen(); for (const k of Object.keys(p)){ if (k === 'level') continue; const v = parseFloat(URLQ.get(k)); if (isFinite(v)) p[k] = v; }
+  return {i, p};
+})();
+const MODE = (URLQ.get('mode') || '').toLowerCase();
+const LOCK = !!LINK, TEST = LOCK && MODE === 'test', SHOW = LOCK && MODE === 'show', SOLN = LOCK && MODE === 'solution', BARE = TEST || SHOW || SOLN;
+const NOSOL = URLQ.get('solution') === '0';
+const STU = parseFloat(URLQ.get('launch')), HAS_STU = SHOW && isFinite(STU);
+if (LOCK) $('app').classList.add('locked');
+if (BARE){ document.documentElement.classList.add('bare'); $('app').classList.add('bare'); }
+if (SHOW || SOLN){ $('scene').style.cursor = 'pointer'; $('scene').title = 'Tap to replay'; }
+if (LOCK){ $('btnFresh').hidden = true; $('btnNext').hidden = true; }
+if (NOSOL) $('btnSolve').hidden = true;
+const store = {
+  get(k, d){ if (LOCK) return d; try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v ?? d; } catch (e) { return d; } },
+  set(k, v){ if (LOCK) return; try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+let done = store.get('motion-graphs-done', {});
+
+/* ---------- motion: the graph function, the cart's position x(t) and velocity v(t) ---------- */
+const S = {cur:0, p:null, t:0, run:false, probe:null, stu:null, banner:null, msg:'', msgOk:false, tries:0, helped:false, phase:'given', M:null};
+const q = () => QS[S.cur];
+function model(){
+  const Q = q(), sh = SHAPES[Q.shape], g = fnOf(Q.shape, S.p), N = 1600, dt = T_END / N;
+  const X = new Float64Array(N + 1), D = new Float64Array(N + 1);   // position and distance so far
+  if (sh.graph === 'x'){ for (let i = 0; i <= N; i++) X[i] = g(i * dt); }
+  else { X[0] = 0; for (let i = 1; i <= N; i++) X[i] = X[i - 1] + (g((i - 1) * dt) + g(i * dt)) / 2 * dt; }
+  for (let i = 1; i <= N; i++) D[i] = D[i - 1] + Math.abs(X[i] - X[i - 1]);
+  const at = (A, t) => { const u = clamp(t / dt, 0, N), i = Math.floor(u), k = u - i; return i >= N ? A[N] : A[i] + (A[i + 1] - A[i]) * k; };
+  const x = t => at(X, t), dist = t => at(D, t);
+  const vel = sh.graph === 'v' ? g : (t => (g(Math.min(T_END, t + 1e-3)) - g(Math.max(0, t - 1e-3))) / ((Math.min(T_END, t + 1e-3)) - Math.max(0, t - 1e-3)));
+  // graph value range, in whole units
+  let gmin = Infinity, gmax = -Infinity; for (let i = 0; i <= 200; i++){ const y = g(i * T_END / 200); gmin = Math.min(gmin, y); gmax = Math.max(gmax, y); }
+  gmin = Math.min(0, Math.floor(gmin) - 1); gmax = Math.max(1, Math.ceil(gmax) + 1);
+  let xmin = Infinity, xmax = -Infinity; for (let i = 0; i <= N; i += 8){ xmin = Math.min(xmin, X[i]); xmax = Math.max(xmax, X[i]); }
+  if (sh.graph === 'x'){ xmin = gmin; xmax = gmax; } else { xmin = Math.floor(xmin) - 1; xmax = Math.ceil(xmax) + 1; }
+  return {g, x, vel, dist, kind:sh.graph, gmin, gmax, xmin, xmax};
+}
+
+/* ---------- drawing ---------- */
+const cv = $('scene'), ctx = cv.getContext('2d');
+let W = 760, H = 520;
+function label(s, x, y, color, size = 13, align = 'center'){
+  if (!s) return;
+  ctx.font = `600 ${size}px "IBM Plex Mono", Menlo, monospace`; ctx.textAlign = align;
+  const w = ctx.measureText(s).width, lx = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+  ctx.fillStyle = 'rgba(10,14,20,.82)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(lx - 4, y - size + 1, w + 8, size + 6, 3) : ctx.rect(lx - 4, y - size + 1, w + 8, size + 6); ctx.fill();
+  ctx.fillStyle = color; ctx.fillText(s, x, y);
+}
+function layout(){
+  const top = 44, sceneH = Math.round(H * .3), gTop = top + sceneH + 14;
+  const gl = 58, gr = W - 18, gt = gTop + 10, gb = H - 34;
+  return {top, sceneH, gTop, gl, gr, gt, gb};
+}
+function drawCart(cx, cy, w, alpha = 1, wheelAng = 0){
+  const h = w * .36, wr = w * .13;
+  ctx.save(); ctx.globalAlpha = alpha;
+  const body = ctx.createLinearGradient(0, cy - h - wr, 0, cy - wr); body.addColorStop(0, '#ff9a48'); body.addColorStop(1, '#c24f10');
+  ctx.fillStyle = body; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(cx - w / 2, cy - h - wr * 1.4, w, h, 4) : ctx.rect(cx - w / 2, cy - h - wr * 1.4, w, h); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(cx - w / 2 + 4, cy - h - wr * 1.4 + 3, w - 8, 3);
+  ctx.fillStyle = '#20262d'; ctx.fillRect(cx - w * .12, cy - h - wr * 1.4 - 5, w * .24, 5);   // reflector card for the detector
+  for (const s of [-1, 1]){
+    const wx = cx + s * w * .3, wy = cy - wr;
+    ctx.fillStyle = '#14181d'; ctx.beginPath(); ctx.arc(wx, wy, wr, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#a9b6c2'; ctx.lineWidth = 1.5; for (let k = 0; k < 3; k++){ const a = wheelAng + k * Math.PI / 3; ctx.beginPath(); ctx.moveTo(wx - Math.cos(a) * wr * .7, wy - Math.sin(a) * wr * .7); ctx.lineTo(wx + Math.cos(a) * wr * .7, wy + Math.sin(a) * wr * .7); ctx.stroke(); }
+  }
+  ctx.restore();
+}
+function paint(){
+  const M = S.M, Q = q(), L = layout(), t = S.t;
+  ctx.fillStyle = '#0f161e'; ctx.fillRect(0, 0, W, H);
+  /* --- the lab bench --- */
+  const sy0 = L.top, sh = L.sceneH, trackY = sy0 + sh * .66;
+  const wall = ctx.createLinearGradient(0, sy0, 0, trackY); wall.addColorStop(0, '#1d2a37'); wall.addColorStop(1, '#2a3846');
+  ctx.fillStyle = wall; ctx.fillRect(0, sy0 - 44, W, trackY - sy0 + 44);
+  const bench = ctx.createLinearGradient(0, trackY, 0, sy0 + sh + 10); bench.addColorStop(0, '#6b4f36'); bench.addColorStop(1, '#3e2c1d');
+  ctx.fillStyle = bench; ctx.fillRect(0, trackY + 8, W, sy0 + sh + 10 - trackY - 8);
+  const tx0 = 92, tx1 = W - 24, TX = x => tx0 + (x - M.xmin) / (M.xmax - M.xmin) * (tx1 - tx0);
+  // track and meter tape
+  ctx.fillStyle = '#b8c3cc'; ctx.fillRect(tx0 - 10, trackY, tx1 - tx0 + 20, 8); ctx.fillStyle = '#7d8a96'; ctx.fillRect(tx0 - 10, trackY + 6, tx1 - tx0 + 20, 2);
+  ctx.fillStyle = '#4a5562'; ctx.fillRect(tx0 - 14, trackY - 10, 6, 18); ctx.fillRect(tx1 + 8, trackY - 10, 6, 18);
+  ctx.fillStyle = '#e8d38a'; ctx.fillRect(tx0, trackY + 10, tx1 - tx0, 16);
+  // on velocity-graph area questions the tape would give the answer away, so it stays blank until the solution
+  const Pq = Q.probe, blank = M.kind === 'v' && (Pq.kind === 'area' || Pq.kind === 'dist') && S.probe !== 'sol';
+  if (blank){ ctx.fillStyle = '#3a2f12'; ctx.font = '600 11px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText('scale hidden: use the graph', (tx0 + tx1) / 2, trackY + 22); }
+  else {
+  ctx.strokeStyle = '#3a2f12'; ctx.fillStyle = '#3a2f12'; ctx.font = '600 11px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'center';
+  for (let m = Math.ceil(M.xmin * 10) / 10; m <= M.xmax + 1e-9; m = +(m + .1).toFixed(1)){
+    const X = TX(m), whole = Math.abs(m - Math.round(m)) < 1e-6; ctx.lineWidth = whole ? 1.5 : .7;
+    ctx.beginPath(); ctx.moveTo(X, trackY + 10); ctx.lineTo(X, trackY + 10 + (whole ? 9 : 4)); ctx.stroke();
+    if (whole) ctx.fillText(`${minus(Math.round(m))}`, X, trackY + 25);
+  }
+  ctx.textAlign = 'right'; ctx.fillText('m', tx1 - 2, trackY + 25);
+  }
+  // motion detector on a stand at the left end
+  const dx = 40, dy = trackY - 30;
+  ctx.fillStyle = '#4a5562'; ctx.fillRect(dx - 3, dy + 10, 6, trackY - dy - 2);
+  ctx.fillStyle = '#2b333c'; ctx.fillRect(dx - 18, dy - 14, 34, 30); ctx.fillStyle = '#c9a54a'; ctx.beginPath(); ctx.arc(dx + 6, dy + 1, 10, 0, 7); ctx.fill();
+  ctx.fillStyle = '#1b2026'; ctx.beginPath(); ctx.arc(dx + 6, dy + 1, 6, 0, 7); ctx.fill();
+  label('motion detector', 8, sy0 + sh + 2, '#a9b6c2', 10, 'left');
+  // ghost images each whole second, the cart, its velocity arrow and the detector's pulses
+  const cartW = clamp((tx1 - tx0) / (M.xmax - M.xmin) * .55, 30, 54);
+  for (let k = 1; k <= Math.floor(t + 1e-6) && k <= T_END; k++) drawCart(TX(M.x(k)), trackY, cartW, .22);
+  const cx = TX(M.x(t));
+  if (S.run && !reduceMotion){ ctx.strokeStyle = 'rgba(201,165,74,.5)'; ctx.lineWidth = 2; for (let k = 0; k < 3; k++){ const r = ((performance.now() / 6 + k * 40) % 120); const xx = dx + 16 + r * (cx - dx - 16) / 120; ctx.globalAlpha = 1 - r / 120; ctx.beginPath(); ctx.arc(xx, dy + 1, 10 + r * .08, -0.6, 0.6); ctx.stroke(); } ctx.globalAlpha = 1; }
+  drawCart(cx, trackY, cartW, 1, M.x(t) / (cartW * .13) * (tx1 - tx0) / (M.xmax - M.xmin) * .9);
+  const v = M.vel(t);
+  if (Math.abs(v) > .05){ const len = clamp(v * 14, -90, 90), ay = trackY - cartW * .55 - 14; ctx.strokeStyle = '#3dffa2'; ctx.fillStyle = '#3dffa2'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx, ay); ctx.lineTo(cx + len - Math.sign(len) * 8, ay); ctx.stroke(); ctx.beginPath(); ctx.moveTo(cx + len, ay); ctx.lineTo(cx + len - Math.sign(len) * 9, ay - 6); ctx.lineTo(cx + len - Math.sign(len) * 9, ay + 6); ctx.fill(); }
+  // probe markers on the track: displacement landing spot, odometer
+  const P = Q.probe;
+  if (P.kind === 'area' && S.probe){
+    const end = M.x(P.t2), mark = (val, col, txt) => { const X = TX(M.x(P.t1) + val); ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(X, trackY - 40); ctx.lineTo(X, trackY + 8); ctx.stroke(); label(txt, X, trackY - 46, col, 11); };
+    if (S.probe === 'sol') mark(end - M.x(P.t1), '#7dffc1', `Δx = ${f(Q.ans(S.p))} m`);
+    if (S.stu != null) mark(S.stu, '#ff8a2a', 'yours');
+  }
+  if (P.kind === 'dist' && (S.run || S.probe)){
+    const total = M.dist(P.t2), sofar = M.dist(clamp(t, P.t1, P.t2)) - M.dist(P.t1), maxv = Math.max(total, S.stu || 0) * 1.12 || 1;
+    const ox = 130, oy = sy0 + 6, ow = Math.min(210, W - 400);
+    ctx.fillStyle = 'rgba(10,14,20,.8)'; ctx.fillRect(ox - 8, oy - 4, ow + 16, 36);
+    ctx.font = '600 11px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'left'; ctx.fillStyle = '#a9b6c2'; ctx.fillText('odometer: distance traveled', ox, oy + 8);
+    ctx.fillStyle = '#2a3846'; ctx.fillRect(ox, oy + 14, ow, 10); ctx.fillStyle = '#62e0b5'; ctx.fillRect(ox, oy + 14, ow * sofar / maxv, 10);
+    if (S.stu != null){ const X = ox + ow * S.stu / maxv; ctx.fillStyle = '#ff8a2a'; ctx.fillRect(X - 1.5, oy + 10, 3, 18); }
+    if (S.probe === 'sol') label(`${f(total)} m`, ox + ow * total / maxv, oy + 44, '#7dffc1', 11);
+  }
+  // clock
+  label(`t = ${t.toFixed(1)} s`, 14, sy0 + 18, '#eaf0f4', 14, 'left');
+
+  /* --- the graph --- */
+  const GX = tt => L.gl + tt / T_END * (L.gr - L.gl), GY = y => L.gb - (y - M.gmin) / (M.gmax - M.gmin) * (L.gb - L.gt);
+  ctx.fillStyle = '#121b24'; ctx.fillRect(L.gl, L.gt, L.gr - L.gl, L.gb - L.gt);
+  const span = M.gmax - M.gmin, ystep = span > 14 ? 2 : 1;
+  ctx.lineWidth = 1; ctx.font = '500 11px "IBM Plex Mono", Menlo, monospace';
+  for (let s = 0; s <= T_END * 2; s++){ const tt = s / 2; ctx.strokeStyle = s % 2 ? '#18232e' : '#24323f'; ctx.beginPath(); ctx.moveTo(GX(tt), L.gt); ctx.lineTo(GX(tt), L.gb); ctx.stroke(); if (!(s % 2)){ ctx.fillStyle = '#8796a5'; ctx.textAlign = 'center'; ctx.fillText(`${tt}`, GX(tt), L.gb + 14); } }
+  for (let y = M.gmin; y <= M.gmax + 1e-9; y += ystep / 2){ const major = Math.abs(y / ystep - Math.round(y / ystep)) < 1e-6; ctx.strokeStyle = Math.abs(y) < 1e-9 ? '#6d7d8c' : major ? '#24323f' : '#18232e'; ctx.beginPath(); ctx.moveTo(L.gl, GY(y)); ctx.lineTo(L.gr, GY(y)); ctx.stroke(); if (major){ ctx.fillStyle = '#8796a5'; ctx.textAlign = 'right'; ctx.fillText(minus(+y.toFixed(2)), L.gl - 6, GY(y) + 4); } }
+  ctx.fillStyle = '#a9b6c2'; ctx.font = '600 12px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'right'; ctx.fillText('Time (s)', L.gr, L.gb + 28);
+  ctx.save(); ctx.translate(16, (L.gt + L.gb) / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.fillText(M.kind === 'x' ? 'Position (m)' : 'Velocity (m/s)', 0, 0); ctx.restore();
+  // shaded area for displacement and distance on velocity graphs
+  if ((P.kind === 'area' || (P.kind === 'dist' && M.kind === 'v')) && (S.probe || S.run)){
+    const tEnd = S.probe ? P.t2 : Math.min(t, P.t2);
+    for (let i = 0; i < 400; i++){ const a = P.t1 + (tEnd - P.t1) * i / 400, b = P.t1 + (tEnd - P.t1) * (i + 1) / 400, ya = M.g(a), yb = M.g(b), pos = ya + yb >= 0; ctx.fillStyle = pos ? 'rgba(98,224,181,.25)' : 'rgba(255,107,94,.25)'; ctx.beginPath(); ctx.moveTo(GX(a), GY(0)); ctx.lineTo(GX(a), GY(ya)); ctx.lineTo(GX(b), GY(yb)); ctx.lineTo(GX(b), GY(0)); ctx.fill(); }
+  }
+  // the graph line
+  ctx.strokeStyle = '#6cc4ff'; ctx.lineWidth = 3.5; ctx.lineJoin = 'round'; ctx.beginPath();
+  for (let i = 0; i <= 400; i++){ const tt = T_END * i / 400; i ? ctx.lineTo(GX(tt), GY(M.g(tt))) : ctx.moveTo(GX(tt), GY(M.g(tt))); }
+  ctx.stroke();
+  // a given tangent line, drawn as part of the question
+  if (Q.tangent){ const [[ta, ya], [tb, yb]] = Q.tangent(S.p), s2 = (yb - ya) / (tb - ta), e0 = Math.max(0, ta - .4), e1 = Math.min(T_END, tb + .4); ctx.save(); ctx.strokeStyle = '#c3ccd5'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]); ctx.beginPath(); ctx.moveTo(GX(e0), GY(ya + s2 * (e0 - ta))); ctx.lineTo(GX(e1), GY(ya + s2 * (e1 - ta))); ctx.stroke(); ctx.restore(); ctx.fillStyle = '#c3ccd5'; for (const [tt, yy] of [[ta, ya], [tb, yb]]){ ctx.beginPath(); ctx.arc(GX(tt), GY(yy), 4.5, 0, 7); ctx.fill(); } label('tangent at 1 s', GX(tb + .45), GY(yb) - 10, '#c3ccd5', 11, 'left'); }
+  // probes on the graph
+  const ans = Q.ans(S.p);
+  const slopeLine = (t0, s, col, dash, half = 1.1, left) => { const y0 = M.g(t0), a = Math.max(0, t0 - half), b = left ? t0 + .4 : Math.min(T_END, t0 + half); ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 2.5; if (dash) ctx.setLineDash([7, 5]); ctx.beginPath(); ctx.moveTo(GX(a), GY(y0 + s * (a - t0))); ctx.lineTo(GX(b), GY(y0 + s * (b - t0))); ctx.stroke(); ctx.restore(); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(GX(t0), GY(y0), 4.5, 0, 7); ctx.fill(); };
+  const show = (who, val) => {
+    const col = who === 'sol' ? '#7dffc1' : '#ff8a2a', txt = who === 'sol' ? `${Q.sym.replace(/<[^>]+>/g, '')} = ${f(ans)} ${Q.unit}` : 'yours';
+    if (P.kind === 'point'){ ctx.save(); ctx.strokeStyle = col; ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(L.gl, GY(val)); ctx.lineTo(GX(P.t), GY(val)); ctx.lineTo(GX(P.t), L.gb); ctx.stroke(); ctx.restore(); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(GX(P.t), GY(val), 6, 0, 7); ctx.fill(); label(txt, GX(P.t) + 12, GY(val) - 10, col, 12, 'left'); }
+    if (P.kind === 'slope'){ const s = (P.speed ? Math.sign(M.vel(P.t)) || 1 : 1) * val * (P.scale || 1); slopeLine(P.t, s, col, who !== 'sol', 1.1, P.left); label(txt, GX(P.t) + 12, GY(M.g(P.t)) - (who === 'sol' ? 14 : -26), col, 12, 'left'); }
+    if (P.kind === 'chord'){ const y1 = M.g(P.t1), y2 = y1 + val * (P.t2 - P.t1); ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 2.5; if (who !== 'sol') ctx.setLineDash([7, 5]); ctx.beginPath(); ctx.moveTo(GX(P.t1), GY(y1)); ctx.lineTo(GX(P.t2), GY(y2)); ctx.stroke(); ctx.restore(); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(GX(P.t2), GY(y2), 5, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(GX(P.t1), GY(y1), 5, 0, 7); ctx.fill(); label(txt, GX((P.t1 + P.t2) / 2), GY((y1 + y2) / 2) - 12, col, 12); }
+    if (P.kind === 'time'){ ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 2.5; if (who !== 'sol') ctx.setLineDash([7, 5]); ctx.beginPath(); ctx.moveTo(GX(val), L.gt); ctx.lineTo(GX(val), L.gb); ctx.stroke(); ctx.restore(); label(txt, GX(val), L.gt + 16, col, 12); if (who === 'sol'){ ctx.fillStyle = col; ctx.beginPath(); ctx.arc(GX(val), GY(0), 6, 0, 7); ctx.fill(); } }
+    if ((P.kind === 'area' || P.kind === 'dist') && who === 'sol') label(txt, (L.gl + L.gr) / 2, L.gt + 16, col, 12);
+  };
+  if (S.probe === 'sol' || (S.stu != null && S.phase === 'done' && !SHOW && !HAS_STU && false)) show('sol', ans);
+  if (S.stu != null) show('stu', S.stu);
+  // time cursor
+  if (S.run || t > 0){ ctx.strokeStyle = 'rgba(255,210,94,.8)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(GX(t), L.gt); ctx.lineTo(GX(t), L.gb); ctx.stroke(); ctx.fillStyle = '#ffd25e'; ctx.beginPath(); ctx.arc(GX(t), GY(M.g(t)), 5.5, 0, 7); ctx.fill(); }
+  /* --- labels across the top --- */
+  ctx.font = '600 14px "IBM Plex Mono", Menlo, monospace'; ctx.textAlign = 'left';
+  const name = Q.name, nw = ctx.measureText(name).width; ctx.fillStyle = 'rgba(10,14,20,.8)'; ctx.fillRect(8, 8, nw + 20, 28); ctx.fillStyle = '#7dffc1'; ctx.fillText(name, 18, 27);
+  let tag = SHOW ? (HAS_STU && S.phase !== 'run1' && S.phase !== 'given' ? `Your answer: ${f(STU)} ${Q.unit}` : 'Watch the run') : SOLN ? 'Correct answer' : '';
+  if (tag){ const tw = ctx.measureText(tag).width; ctx.fillStyle = 'rgba(10,14,20,.8)'; ctx.fillRect(W - tw - 28, 8, tw + 20, 28); ctx.fillStyle = tag.startsWith('Your') ? '#ffb46b' : '#eaf0f4'; ctx.fillText(tag, W - tw - 18, 27); }
+  if (S.msg){ ctx.font = '600 14px "IBM Plex Sans", system-ui, sans-serif'; const mw = ctx.measureText(S.msg).width; ctx.fillStyle = 'rgba(10,14,20,.88)'; ctx.fillRect(L.gl + 8, L.gt + 8, mw + 20, 26); ctx.fillStyle = S.msgOk ? '#7dffc1' : '#ff8b7a'; ctx.fillText(S.msg, L.gl + 18, L.gt + 26); }
+  if ((SHOW || SOLN) && !S.run && S.phase === 'done'){ ctx.font = '600 12px "IBM Plex Mono", Menlo, monospace'; const h2 = 'Tap to replay', hw = ctx.measureText(h2).width; ctx.fillStyle = 'rgba(10,14,20,.75)'; ctx.fillRect(W - hw - 26, 40, hw + 18, 22); ctx.fillStyle = '#eaf0f4'; ctx.fillText(h2, W - hw - 17, 55); }
+  if (S.banner){ const size = clamp(W / 13, 22, 48), a = reduceMotion ? 1 : clamp((S.banner.until - performance.now()) / 500, 0, 1); ctx.globalAlpha = a; ctx.font = `400 ${size}px "Saira Stencil One", Impact, sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(8,12,18,.85)'; ctx.lineJoin = 'round'; ctx.strokeText(S.banner.text, (L.gl + L.gr) / 2, (L.gt + L.gb) / 2 + size / 3); ctx.fillStyle = S.banner.c; ctx.fillText(S.banner.text, (L.gl + L.gr) / 2, (L.gt + L.gb) / 2 + size / 3); ctx.globalAlpha = 1; }
+}
+
+/* ---------- running the cart ---------- */
+const sleep = ms => new Promise(r => setTimeout(r, reduceMotion ? 0 : ms));
+function runCart(){
+  return new Promise(res => {
+    S.t = 0; S.run = true;
+    if (reduceMotion){ S.t = T_END; S.run = false; paint(); return res(); }
+    const t0 = performance.now(), speed = 1.25;
+    const step = now => { S.t = Math.min(T_END, (now - t0) / 1000 * speed); paint(); if (S.t < T_END) requestAnimationFrame(step); else { S.run = false; paint(); res(); } };
+    requestAnimationFrame(step);
+  });
+}
+function bannerLoop(){ const tick = () => { paint(); if (S.banner && performance.now() < S.banner.until) requestAnimationFrame(tick); else { S.banner = null; paint(); } }; requestAnimationFrame(tick); }
+function judge(val){ const a = q().ans(S.p), ok = Math.abs(val - a) <= .02 * Math.abs(a) + 1e-9; return {ok, word:ok ? '' : (val > a ? 'Your answer is too large.' : 'Your answer is too small.')}; }
+function showStudent(val){
+  S.stu = val; const j = judge(val);
+  S.banner = {text:j.ok ? 'CORRECT' : 'NOT QUITE', c:j.ok ? '#7dffc1' : '#ff8b7a', until:performance.now() + 1700};
+  S.msg = j.word; S.msgOk = j.ok; bannerLoop(); return j;
+}
+
+/* ---------- question flow ---------- */
+function loadQ(i, fresh = true){
+  S.cur = i; if (fresh) S.p = q().gen();
+  Object.assign(S, {t:0, run:false, probe:null, stu:null, banner:null, msg:'', tries:0, helped:false, phase:'given'});
+  S.M = model();
+  const Q = q();
+  $('tag').textContent = `Question ${CODES[i]} · ${CHAPTERS[Q.ch]}`;
+  $('qName').textContent = Q.name; $('story').innerHTML = Q.story(S.p);
+  $('ansLabel').innerHTML = Q.sym + ' ='; $('ansUnit').textContent = Q.unit; $('ans').value = '';
+  $('errMsg').hidden = true; $('debrief').hidden = true;
+  store.set('motion-graphs-cur', i);
+  cv.setAttribute('aria-label', `A cart on a track with its ${S.M.kind === 'x' ? 'position' : 'velocity'} vs. time graph. ${Q.story(S.p).replace(/<[^>]+>/g, '')}`);
+  renderNav(); paint();
+}
+function renderNav(){
+  const nav = $('nav'); nav.textContent = '';
+  CHAPTERS.forEach((c, ci) => {
+    const g2 = document.createElement('div'); g2.className = 'group';
+    const lab = document.createElement('span'); lab.textContent = c; g2.append(lab);
+    QS.forEach((Q, i) => { if (Q.ch !== ci) return; const b = document.createElement('button'); b.type = 'button'; b.className = 'lv' + (i === S.cur ? ' cur' : '') + (done[i] ? ' done' : ''); b.textContent = CODES[i]; b.setAttribute('aria-label', `Question ${CODES[i]}, ${Q.name}${done[i] ? ', solved' : ''}`); b.onclick = () => { if (!S.run) loadQ(i); }; g2.append(b); });
+    nav.append(g2);
+  });
+  $('total').textContent = `✓ ${Object.keys(done).length} of ${QS.length}`;
+}
+async function fire(){
+  if (S.run || BARE) return;
+  const val = parseFloat($('ans').value.trim().replace('−', '-').replace(',', '.'));
+  if (!isFinite(val)){ $('errMsg').textContent = 'Enter a number.'; $('errMsg').hidden = false; return; }
+  $('errMsg').hidden = true; $('debrief').hidden = true; $('btnGo').disabled = true; S.tries++;
+  S.stu = null; S.msg = ''; S.probe = null; await runCart(); S.probe = 'stu'; const j = showStudent(val);
+  $('btnGo').disabled = false;
+  const line = $('resultLine');
+  if (j.ok){ line.textContent = S.helped ? 'Correct, using the worked solution.' : `Correct on try ${S.tries}.`; line.className = 'result hit'; if (!S.helped){ done[S.cur] = 1; store.set('motion-graphs-done', done); } if (!NOSOL) showSteps(); $('btnNext').hidden = LOCK || S.cur >= QS.length - 1; }
+  else { line.textContent = j.word; line.className = 'result miss'; $('btnSolve').hidden = S.helped || NOSOL; $('btnNext').hidden = true; if (!S.helped) $('stepsBox').hidden = true; }
+  $('debrief').hidden = false; renderNav();
+  $('debrief').scrollIntoView({block:'nearest', behavior:reduceMotion ? 'auto' : 'smooth'});
+}
+function showSteps(){ $('steps').innerHTML = q().steps(S.p).map(s => `<li>${s}</li>`).join(''); $('stepsBox').hidden = false; $('btnSolve').hidden = true; }
+$('form').addEventListener('submit', e => { e.preventDefault(); $('ans').blur(); fire(); });
+$('btnSolve').onclick = () => { if (NOSOL) return; S.helped = true; showSteps(); };
+$('btnFresh').onclick = () => { if (!LOCK && !S.run) loadQ(S.cur); };
+$('btnNext').onclick = () => { if (!LOCK && !S.run) loadQ(S.cur + 1); };
+
+async function playShow(){
+  if (S.run) return;
+  S.stu = null; S.msg = ''; S.probe = null; S.phase = 'run1';
+  await runCart();
+  if (HAS_STU){ S.phase = 'yours'; await sleep(500); S.probe = 'stu'; showStudent(STU); }
+  S.phase = 'done'; paint();
+}
+async function playSolution(){
+  if (S.run) return;
+  S.probe = null; S.phase = 'run1'; await runCart(); S.probe = 'sol'; S.phase = 'done'; paint();
+}
+
+function resize(){
+  const box = $('range'), wide = innerWidth > 900 && !BARE;
+  const aw = box.clientWidth, nW = Math.floor(aw), nH = Math.floor(wide ? Math.min(box.clientHeight, aw * .8) : aw * .62), dpr = devicePixelRatio || 1;
+  if (nW === W && nH === H && cv.width === Math.round(W * dpr)) return;
+  W = nW; H = Math.max(nH, 330); cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (S.M) paint();
+}
+new ResizeObserver(resize).observe($('range'));
+addEventListener('resize', resize);
+function start(){
+  resize();
+  if (LINK){ S.p = LINK.p; loadQ(LINK.i, false); }
+  else { const cur = store.get('motion-graphs-cur', 0); loadQ(QS[cur] ? cur : 0); }
+  if (SHOW){ cv.addEventListener('click', playShow); setTimeout(playShow, 900); }
+  if (SOLN){ cv.addEventListener('click', playSolution); setTimeout(playSolution, 700); }
+  if (document.fonts?.ready) document.fonts.ready.then(paint);
+}
+start();
+})();
+</script>
+</body>
+</html>

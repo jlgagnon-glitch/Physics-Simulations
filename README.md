@@ -42,6 +42,18 @@ answers have two values, so `launch` takes both, separated by a comma: `launch=1
 `vectors-myopenmath.md` has two-part (Multipart) MyOpenMath code for all 20 problems, and
 `build_vectors_myopenmath.py` regenerates it.
 
+## Motion Graphs Lab
+
+`motion-graphs.html` has 20 questions based on the PHYS 205 Lecture 6 examples (graphical interpretation
+of motion), in four chapters: Position graphs, Curved position, Velocity graphs and Turning around.
+A cart rolls along a lab track in front of a motion detector, with ghost images each whole second, while a
+cursor traces its x–t or v–t graph. After an answer, it's drawn on the graph: a point, slope line, chord,
+time marker, landing spot or odometer reading.
+
+Links use `level=1.1` to `level=4.5` to choose the question, because `q` is one of the graph's numbers.
+`motion-graphs-myopenmath.md` has MyOpenMath code for all 20, and `build_graphs_myopenmath.py`
+regenerates it.
+
 ### MyOpenMath (Proving Ground)
 
 `proving-ground-myopenmath.md` has ready-to-paste Common Control and Question Text for all
