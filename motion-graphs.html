@@ -48,6 +48,7 @@ h2{margin:0; font-size:20px; line-height:1.2}
 .btn{border:1px solid var(--ink); background:transparent; padding:9px 13px; font-weight:700; cursor:pointer; border-radius:2px}
 .btn.go{background:var(--safety); border-color:var(--safety); color:var(--on-safety)}
 .btn:disabled{opacity:.45; cursor:default}
+.btn.sign{min-width:44px; min-height:44px; padding:0 10px; font-size:20px; line-height:1}   /* phone and tablet number pads have no minus key */
 .row{display:flex; flex-wrap:wrap; gap:8px}
 .err{margin:0; color:var(--miss); font-weight:700; font-size:15px}
 .note{margin:0; font-size:14.5px; color:var(--muted)}
@@ -106,6 +107,9 @@ html.bare, html.bare body{height:auto}
 <script>
 (() => {
 const $ = id => document.getElementById(id);
+// Number pads on phones and tablets have no minus key, so each answer box gets a ± button that flips the sign.
+const signBtn = inp => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn sign'; b.textContent = '±'; b.setAttribute('aria-label', 'Change the sign of the answer');
+  b.onclick = () => { const v = inp.value.trim(); inp.value = /^[-−]/.test(v) ? v.replace(/^[-−]\s*/, '') : '-' + v; }; inp.after(b); };
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -442,6 +446,7 @@ async function fire(){
   $('debrief').scrollIntoView({block:'nearest', behavior:reduceMotion ? 'auto' : 'smooth'});
 }
 function showSteps(){ $('steps').innerHTML = q().steps(S.p).map(s => `<li>${s}</li>`).join(''); $('stepsBox').hidden = false; $('btnSolve').hidden = true; }
+signBtn($('ans'));
 $('form').addEventListener('submit', e => { e.preventDefault(); $('ans').blur(); fire(); });
 $('btnSolve').onclick = () => { if (NOSOL) return; S.helped = true; showSteps(); };
 $('btnFresh').onclick = () => { if (!LOCK && !S.run) loadQ(S.cur); };

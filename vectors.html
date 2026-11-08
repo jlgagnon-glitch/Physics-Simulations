@@ -51,6 +51,7 @@ h2{margin:0; font-size:20px; line-height:1.2}
 .btn{border:1px solid var(--ink); background:transparent; padding:9px 13px; font-weight:700; cursor:pointer; border-radius:2px}
 .btn.go{background:var(--safety); border-color:var(--safety); color:var(--on-safety)}
 .btn:disabled{opacity:.45; cursor:default}
+.btn.sign{min-width:44px; min-height:44px; padding:0 10px; font-size:20px; line-height:1}   /* phone and tablet number pads have no minus key */
 .row{display:flex; flex-wrap:wrap; gap:8px}
 .err{margin:0; color:var(--miss); font-weight:700; font-size:15px}
 .note{margin:0; font-size:14.5px; color:var(--muted)}
@@ -108,6 +109,9 @@ html.bare, html.bare body{height:auto}
 <script>
 (() => {
 const $ = id => document.getElementById(id);
+// Number pads on phones and tablets have no minus key, so each answer box gets a ± button that flips the sign.
+const signBtn = inp => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn sign'; b.textContent = '±'; b.setAttribute('aria-label', 'Change the sign of the answer');
+  b.onclick = () => { const v = inp.value.trim(); inp.value = /^[-−]/.test(v) ? v.replace(/^[-−]\s*/, '') : '-' + v; }; inp.after(b); };
 const D2R = Math.PI / 180;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
@@ -581,7 +585,7 @@ function loadQ(i, fresh = true){
     const wrap = document.createElement('div'); const inp = document.createElement('input');
     inp.id = 'in' + k; inp.type = 'text'; inp.inputMode = 'decimal'; inp.autocomplete = 'off';
     const u = document.createElement('span'); u.className = 'u'; u.textContent = pt.unit;
-    wrap.append(inp, u); form.append(lab, wrap);
+    wrap.append(inp, u); signBtn(inp); form.append(lab, wrap);
   });
   $('errMsg').hidden = true; $('debrief').hidden = true;
   store.set('vector-range-cur', i);
