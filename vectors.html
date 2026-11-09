@@ -113,7 +113,8 @@ const $ = id => document.getElementById(id);
 const signBtn = inp => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn sign'; b.textContent = '±'; b.setAttribute('aria-label', 'Change the sign of the answer');
   b.onclick = () => { const v = inp.value.trim(); inp.value = /^[-−]/.test(v) ? v.replace(/^[-−]\s*/, '') : '-' + v; }; inp.after(b); };
 const D2R = Math.PI / 180;
-const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;   // only turns off decorative effects: the physics motion always plays
+const INSTANT = new URLSearchParams(location.search).get('instant') === '1';   // jump to the end of each run (used by automated tests)
 const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const rnd = (a, b, s) => { const n = Math.floor((b - a) / s + 1e-9); return +(a + s * Math.floor(Math.random() * (n + 1))).toFixed(6); };
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -532,11 +533,11 @@ function paint(){
 }
 
 /* ---------- animation ---------- */
-const sleep = ms => new Promise(r => setTimeout(r, reduceMotion ? 0 : ms));
+const sleep = ms => new Promise(r => setTimeout(r, INSTANT ? 0 : ms));
 function tween(key, to, ms){
   return new Promise(res => {
     const from = S[key], t0 = performance.now();
-    if (reduceMotion){ S[key] = to; paint(); return res(); }
+    if (INSTANT){ S[key] = to; paint(); return res(); }
     const step = now => { const k = clamp((now - t0) / ms, 0, 1); S[key] = from + (to - from) * k; paint(); k < 1 ? requestAnimationFrame(step) : res(); };
     requestAnimationFrame(step);
   });

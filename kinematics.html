@@ -109,7 +109,8 @@ const $ = id => document.getElementById(id);
 // Number pads on phones and tablets have no minus key, so each answer box gets a ± button that flips the sign.
 const signBtn = inp => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn sign'; b.textContent = '±'; b.setAttribute('aria-label', 'Change the sign of the answer');
   b.onclick = () => { const v = inp.value.trim(); inp.value = /^[-−]/.test(v) ? v.replace(/^[-−]\s*/, '') : '-' + v; }; inp.after(b); };
-const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;   // only turns off decorative effects: the physics motion always plays
+const INSTANT = new URLSearchParams(location.search).get('instant') === '1';   // jump to the end of each run (used by automated tests)
 const g = 9.8;
 const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const rnd = (a, b, s) => { const n = Math.floor((b - a) / s + 1e-9); return +(a + s * Math.floor(Math.random() * (n + 1))).toFixed(6); };
@@ -513,11 +514,11 @@ function paint(){
 }
 
 /* ---------- running ---------- */
-const sleep = ms => new Promise(r => setTimeout(r, reduceMotion ? 0 : ms));
+const sleep = ms => new Promise(r => setTimeout(r, INSTANT ? 0 : ms));
 function play(mo){
   return new Promise(res => {
     S.t = 0; S.run = true;
-    if (reduceMotion){ S.t = mo.dur; S.run = false; paint(); return res(); }
+    if (INSTANT){ S.t = mo.dur; S.run = false; paint(); return res(); }
     const speed = mo.dur > 6 ? mo.dur / 6 : 1, t0 = performance.now();   // long motions are sped up to about 6 s
     const step = now => { S.t = Math.min(mo.dur, (now - t0) / 1000 * speed); paint(); if (S.t < mo.dur) requestAnimationFrame(step); else { S.run = false; paint(); res(); } };
     requestAnimationFrame(step);

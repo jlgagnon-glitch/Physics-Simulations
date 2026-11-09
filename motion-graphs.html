@@ -110,7 +110,8 @@ const $ = id => document.getElementById(id);
 // Number pads on phones and tablets have no minus key, so each answer box gets a ± button that flips the sign.
 const signBtn = inp => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn sign'; b.textContent = '±'; b.setAttribute('aria-label', 'Change the sign of the answer');
   b.onclick = () => { const v = inp.value.trim(); inp.value = /^[-−]/.test(v) ? v.replace(/^[-−]\s*/, '') : '-' + v; }; inp.after(b); };
-const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;   // only turns off decorative effects: the physics motion always plays
+const INSTANT = new URLSearchParams(location.search).get('instant') === '1';   // jump to the end of each run (used by automated tests)
 const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const until = (make, ok) => { for (let k = 0; k < 20000; k++){ const v = make(); if (ok(v)) return v; } throw new Error('no valid numbers'); };
@@ -403,11 +404,11 @@ function paint(){
 }
 
 /* ---------- running the cart ---------- */
-const sleep = ms => new Promise(r => setTimeout(r, reduceMotion ? 0 : ms));
+const sleep = ms => new Promise(r => setTimeout(r, INSTANT ? 0 : ms));
 function runCart(){
   return new Promise(res => {
     S.t = 0; S.run = true;
-    if (reduceMotion){ S.t = T_END; S.run = false; paint(); return res(); }
+    if (INSTANT){ S.t = T_END; S.run = false; paint(); return res(); }
     const t0 = performance.now(), speed = 1.25;
     const step = now => { S.t = Math.min(T_END, (now - t0) / 1000 * speed); paint(); if (S.t < T_END) requestAnimationFrame(step); else { S.run = false; paint(); res(); } };
     requestAnimationFrame(step);

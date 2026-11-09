@@ -125,7 +125,8 @@ html.bare, html.bare body{height:auto}
 (() => {
 const $ = id => document.getElementById(id);
 const g = 9.8, RAD = Math.PI / 180;
-const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;   // only turns off decorative effects: the physics motion always plays
+const INSTANT = new URLSearchParams(location.search).get('instant') === '1';   // jump to the end of each run (used by automated tests)
 const rnd = (a, b, s) => { const n = Math.round((b - a) / s); return +(a + s * Math.floor(Math.random() * (n + 1))).toFixed(4); };
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const f = x => { if (!isFinite(x)) return '∞'; const a = Math.abs(x); return a >= 100 ? x.toFixed(0) : a >= 10 ? x.toFixed(1) : a >= 1 ? x.toFixed(2) : x.toFixed(3); };
@@ -761,7 +762,7 @@ function launch(){
   const T = Math.max(sim.T, .05), t0 = performance.now(), gap = T / 14; let nextGhost = gap;
   S.run = sim; S.shown = {sim, t:0}; S.strobe = []; S.fx = []; S.banner = null;
   const step = now => {
-    const t = reduceMotion ? T : Math.min(T, (now - t0) / 1000);
+    const t = INSTANT ? T : Math.min(T, (now - t0) / 1000);
     S.shown.t = t; S.lastD = paint(sim, t);
     if (t >= nextGhost && t < T && S.lastD.moving){ S.strobe.push(S.lastD.moving.slice()); nextGhost += gap; }
     if (t < T) rafId = requestAnimationFrame(step); else finish(sim);
