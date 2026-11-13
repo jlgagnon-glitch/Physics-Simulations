@@ -25,10 +25,10 @@ L = [
    "$h = rrand(0.8,1.6,0.1)", "$d = rrand(1.5,3.5,0.1)",
    "$answer = $d*sqrt(9.8/(2*$h))"],
   "A pusher starts a ball from rest and rolls it along a bench $h m high, letting go at the edge. The landing pad is $d m from the edge. What speed must the ball leave the bench with?"),
- ("1.2", "Stop on the line", ["v", "d"], "a", "m/s²", "braking rate (magnitude)", [
+ ("1.2", "Stop on the line", ["v", "d"], "a", "m/s²", "acceleration", [
    "$v = rand(8,20)", "$d = rand(12,40)",
-   "$answer = $v*$v/(2*$d)"],
-  "A test cart reaches the brake zone at $v m/s. It has to stop $d m later, right on the line. How hard must it brake?"),
+   "$answer = -$v*$v/(2*$d)"],
+  "A test cart reaches the brake zone moving right at $v m/s. It has to stop $d m later, right on the line. What is its acceleration while it brakes? Take right as positive, and include the sign."),
  ("1.3", "Fixed angle", ["th", "R"], "v", "m/s", "launch speed", [
    RAD, '$th = randfrom("30,40,50,60")', "$R = rand(8,20)",
    "$answer = sqrt($R*9.8/sin(2*$th*$rad))"],

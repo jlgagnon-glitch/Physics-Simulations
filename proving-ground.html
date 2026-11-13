@@ -50,6 +50,7 @@ h2{margin:0; font-size:20px; line-height:1.2; text-wrap:balance}
 .story b{font-family:var(--f-mono); font-weight:600}
 .entry{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
 .entry label{font-family:var(--f-mono); font-weight:600}
+.btn.sign{min-width:44px; min-height:44px; padding:0 10px; font-size:20px; line-height:1}   /* phone and tablet number pads have no minus key */
 #ans{width:7.5em; font-family:var(--f-mono); font-weight:600; font-size:18px; padding:7px 8px; background:var(--field); border:2px solid var(--safety); border-radius:2px; color:var(--ink)}
 .btn{border:1px solid var(--ink); background:transparent; padding:9px 13px; font-weight:700; cursor:pointer; border-radius:2px}
 .btn.go{background:var(--safety); border-color:var(--safety); color:var(--on-safety)}
@@ -98,6 +99,7 @@ html.bare, html.bare body{height:auto}
       <form class="entry" id="form" autocomplete="off">
         <label for="ans" id="ansLabel"></label>
         <input id="ans" type="text" inputmode="decimal" autocomplete="off" aria-describedby="errMsg">
+        <button class="btn sign" id="btnSign" type="button" aria-label="Change the sign of the answer" hidden>±</button>
         <button class="btn go" id="btnGo" type="submit">Launch</button>
       </form>
       <p class="err" id="errMsg" hidden></p>
@@ -153,15 +155,16 @@ const LEVELS = [
         return onBench ? ['rolling on the bench', `x ${f(x)} m`, `v ${f(sp)} m/s`] : [`fall time ${f(fall)} s`, `x ${f(x)} m`, `vy ${f(g * fall)} m/s`]; }}; },
   steps:(p, a) => [`Fall time from the height: <span class="m">t = √(2h/g) = √(2·${p.h}/9.8) = ${f(fallTime(p.h))} s</span>`, `Speed to cover the distance in that time: <span class="m">v = d/t = ${p.d}/${f(fallTime(p.h))} = ${f(a)} m/s</span>`]},
 
-{ch:0, name:'Stop on the line', sym:'a', unit:'m/s²', word:'braking rate',
-  story:p => `A test cart reaches the brake zone at <b>${p.v} m/s</b>. It has to stop <b>${p.d} m</b> later, right on the line. How hard must it brake?`,
-  eqs:['v² = v₀² + 2a·Δx'], idea:'With no time given, use the equation without t. The final speed is zero, and stopping distance grows with the square of the speed.',
-  gen:() => ({v:rnd(8, 20, 1), d:rnd(12, 40, 1)}), ans:p => p.v * p.v / (2 * p.d), view:p => [-3, p.d * 1.4, p.d * .35],
-  sim(p, a){ const s = a > 0 ? p.v * p.v / (2 * a) : Infinity, Tstop = a > 0 ? p.v / a : Infinity, T = Math.min(Tstop, 6), hit = within(s, p.d, .03);
-    return {T, hit, miss:isFinite(s) ? `The cart stopped ${shortLong(s, p.d, 'm')}.` : 'With no braking, the cart never stops.', facts:isFinite(s) ? [`Stopping distance: ${p.v}² / (2 × ${f(a)}) = ${f(s)} m`, `Stopping time: ${f(Tstop)} s`] : ['A braking rate of zero leaves the speed constant.'],
+{ch:0, name:'Stop on the line', sym:'a', unit:'m/s²', word:'acceleration', signed:true,
+  story:p => `A test cart reaches the brake zone moving right at <b>${p.v} m/s</b>. It has to stop <b>${p.d} m</b> later, right on the line. What is its acceleration while it brakes? Take right as positive.`,
+  eqs:['v² = v₀² + 2a·Δx'], idea:'With no time given, use the equation without t. The final speed is zero. The cart slows down while moving in the positive direction, so its acceleration points the other way and is negative.',
+  gen:() => ({v:rnd(8, 20, 1), d:rnd(12, 40, 1)}), ans:p => -p.v * p.v / (2 * p.d), view:p => [-3, p.d * 1.4, p.d * .35],
+  sim(p, a){ const b = -a, s = b > 0 ? p.v * p.v / (2 * b) : Infinity, Tstop = b > 0 ? p.v / b : Infinity, T = Math.min(Tstop, b > 0 ? 6 : 2.5), hit = within(s, p.d, .03);
+    return {T, hit, miss:isFinite(s) ? `The cart stopped ${shortLong(s, p.d, 'm')}.` : a > 0 ? 'A positive acceleration points the same way as the velocity, so the cart sped up and never stopped. Braking needs an acceleration opposite the motion.' : 'With zero acceleration, the cart never stops.',
+      facts:isFinite(s) ? [`Stopping distance: Δx = −v₀²/(2a) = −${p.v}² / (2 × (${f(a)})) = ${f(s)} m`, `Stopping time: ${f(Tstop)} s`] : a > 0 ? [`The speed grew by ${f(a)} m/s every second`, 'A negative acceleration is needed to slow a cart moving in the positive direction'] : ['Zero acceleration leaves the speed constant.'],
       draw(t, D){ D.ground(); D.pad(p.d, .03 * p.d); D.dim(0, p.d, -p.d * .05, `${p.d} m`);
-        const x = p.v * t - .5 * a * t * t, sp = p.v - a * t; D.cart(x, .012 * p.d); D.vel(x, p.d * .05, sp, 0); return [`t ${f(t)} s`, `x ${f(x)} m`, `v ${f(sp)} m/s`]; }}; },
-  steps:(p, a) => [`Final speed is zero: <span class="m">0 = v₀² − 2a·d</span>`, `Solve for a: <span class="m">a = v₀²/(2d) = ${p.v}²/(2·${p.d}) = ${f(a)} m/s²</span>`]},
+        const x = p.v * t + .5 * a * t * t, sp = p.v + a * t; D.cart(x, .012 * p.d); D.vel(x, p.d * .05, sp, 0); return [`t ${f(t)} s`, `x ${f(x)} m`, `v ${f(sp)} m/s`]; }}; },
+  steps:(p, a) => [`Final speed is zero: <span class="m">0 = v₀² + 2a·Δx</span>`, `Solve for a: <span class="m">a = −v₀²/(2Δx) = −${p.v}²/(2·${p.d}) = ${f(a)} m/s²</span>`, `The negative sign means the acceleration points left, opposite the cart's motion.`]},
 
 {ch:0, name:'Fixed angle', sym:'v', unit:'m/s', word:'launch speed',
   story:p => `A launcher is locked at <b>${p.th}°</b> above level ground. The target is <b>${p.R} m</b> away at launcher height. What launch speed reaches it?`,
@@ -342,7 +345,7 @@ const TEST = !!LINK && MODE === 'test';             // picture of the setup only
 const SOLN = !!LINK && MODE === 'solution';         // picture only, launching the correct answer on its own; tap to replay
 const SHOW = !!LINK && MODE === 'show';            // correct launch with the answer hidden, then the student's own launch if the link has one
 const STU = parseFloat(URLQ.get('launch'));          // the student's answer, passed in by MyOpenMath after they submit
-const HAS_STU = SHOW && isFinite(STU) && STU > 0;
+const HAS_STU = SHOW && isFinite(STU) && (LEVELS[LINK.i].signed ? STU !== 0 : STU > 0);
 const BARE = TEST || SOLN || SHOW;
 if (SHOW) HIDE = true;
 const NOSOL = URLQ.get('solution') === '0';         // never show the worked solution
@@ -726,7 +729,7 @@ function loadLevel(i, fresh = true){
   $('lvName').textContent = L.name;
   $('story').innerHTML = L.story(S.p);
   $('ansLabel').textContent = `${L.sym} (${L.unit})`;
-  $('ans').value = ''; $('ans').setAttribute('aria-label', `${L.word} in ${L.unit}`);
+  $('ans').value = ''; $('ans').setAttribute('aria-label', `${L.word} in ${L.unit}`); $('btnSign').hidden = !L.signed;
   $('eqs').innerHTML = L.eqs.map(e => `<li>${e}</li>`).join('');
   $('errMsg').hidden = true; $('debrief').hidden = true;
   store.set('proving-ground-cur', i);
@@ -753,10 +756,11 @@ function renderNav(){
 }
 let rafId = 0;
 function cancelRun(){ cancelAnimationFrame(rafId); S.run = null; $('btnGo').disabled = false; }
+$('btnSign').onclick = () => { const i = $('ans'), v = i.value.trim(); i.value = /^[-−]/.test(v) ? v.replace(/^[-−]\s*/, '') : '-' + v; i.focus(); };
 function launch(){
   if (S.run || TEST) return;
-  const raw = $('ans').value.trim().replace(',', '.'), v = parseFloat(raw), err = $('errMsg');
-  if (!/^[0-9]*\.?[0-9]+$|^[0-9]+\.$/.test(raw) || !(v > 0)){ err.textContent = `Enter a positive number for ${lv().word}, in ${lv().unit}.`; err.hidden = false; return; }
+  const raw = $('ans').value.trim().replace(',', '.').replace(/^−/, '-').replace(/^-\s+/, '-'), v = parseFloat(raw), err = $('errMsg'), sg = !!lv().signed;
+  if (sg ? (!/^-?([0-9]*\.?[0-9]+|[0-9]+\.)$/.test(raw) || v === 0) : (!/^[0-9]*\.?[0-9]+$|^[0-9]+\.$/.test(raw) || !(v > 0))){ err.textContent = sg ? `Enter a number for ${lv().word}, in ${lv().unit}. It can be negative.` : `Enter a positive number for ${lv().word}, in ${lv().unit}.`; err.hidden = false; return; }
   err.hidden = true; $('debrief').hidden = true; S.last = v; S.tries++;
   const sim = lv().sim(S.p, v); $('btnGo').disabled = true;
   const T = Math.max(sim.T, .05), t0 = performance.now(), gap = T / 14; let nextGhost = gap;

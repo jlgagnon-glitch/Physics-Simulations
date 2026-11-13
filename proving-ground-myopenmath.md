@@ -102,7 +102,7 @@ Variables passed to the simulation: `v, d`
 ```
 $v = rand(8,20)
 $d = rand(12,40)
-$answer = $v*$v/(2*$d)
+$answer = -$v*$v/(2*$d)
 $reltolerance = 0.02
 $stua = getstuans($stuanswers, $thisq)
 $simurl = "https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=1.2&v=$v&d=$d&mode=show"
@@ -116,15 +116,15 @@ $simurl = $simurl . "&launch=$stua" if ($stua != "")
 <iframe src="$simurl" title="Physics Proving Ground: Stop on the line" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%">The simulation shows a correct launch, with the answer hidden. After you submit, it also shows your launch. Tap it to replay. <a href="$simurl" target="_blank" rel="noopener">Open in a new tab</a></p>
 </div>
-<p>A test cart reaches the brake zone at $v m/s. It has to stop $d m later, right on the line. How hard must it brake?</p>
-<p>Use g = 9.8 m/s². Enter the braking rate (magnitude) in m/s², to three significant figures.</p>
+<p>A test cart reaches the brake zone moving right at $v m/s. It has to stop $d m later, right on the line. What is its acceleration while it brakes? Take right as positive, and include the sign.</p>
+<p>Use g = 9.8 m/s². Enter the acceleration in m/s², to three significant figures.</p>
 <p>a = $answerbox m/s²</p>
 ```
 
 **Detailed Solution**
 
 ```html
-<p>Here is the launch with the correct braking rate (magnitude). Tap the picture to replay it.</p>
+<p>Here is the launch with the correct acceleration. Tap the picture to replay it.</p>
 <div style="max-width:820px">
 <iframe src="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=1.2&v=$v&d=$d&mode=solution" title="Physics Proving Ground: Stop on the line, correct launch" loading="lazy" style="width:100%;aspect-ratio:1.55;height:auto;min-height:300px;border:0;border-radius:6px"></iframe>
 <p style="font-size:85%"><a href="https://jlgagnon-glitch.github.io/Physics-Simulations/proving-ground.html?level=1.2&v=$v&d=$d&mode=solution" target="_blank" rel="noopener">Open the launch in a new tab</a></p>
