@@ -1,0 +1,817 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Elbow Flexor Torque Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: anatomy plate on the left (large sagittal view of the arm), problem controls on the right, data and graph below. */
+:root {
+  --bg: #eef1f4;
+  --panel: #ffffff;
+  --ink: #15212c;
+  --ink-2: #4a5866;
+  --ink-3: #75828f;
+  --rule: #d6dce2;
+  --soft: #f4f6f8;
+  --grid: #e6eaee;
+  --skin: #ecd3bf;
+  --skin-edge: #d5b49b;
+  --bone: #f7f3ea;
+  --bone-edge: #a99c86;
+  --bic: #2a78d6;
+  --bra: #eb6834;
+  --brd: #1baf7a;
+  --good-bg: #dff3e8; --good-ink: #145c37;
+  --warn-bg: #fff4d6; --warn-ink: #6b4a00;
+  --bad-bg: #fde4e1; --bad-ink: #8a2116;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10151a; --panel: #171e25; --ink: #e5eaef; --ink-2: #a8b3be; --ink-3: #7c8792;
+    --rule: #2a333c; --soft: #1d252d; --grid: #222b33;
+    --skin: #4a3a30; --skin-edge: #6b5446; --bone: #ddd5c6; --bone-edge: #8f8473;
+    --bic: #3987e5; --bra: #d95926; --brd: #199e70;
+    --good-bg: #173726; --good-ink: #9fe0bb; --warn-bg: #3a2f12; --warn-ink: #f2d28a; --bad-bg: #3d1d19; --bad-ink: #f4aaa0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10151a; --panel: #171e25; --ink: #e5eaef; --ink-2: #a8b3be; --ink-3: #7c8792;
+  --rule: #2a333c; --soft: #1d252d; --grid: #222b33;
+  --skin: #4a3a30; --skin-edge: #6b5446; --bone: #ddd5c6; --bone-edge: #8f8473;
+  --bic: #3987e5; --bra: #d95926; --brd: #199e70;
+  --good-bg: #173726; --good-ink: #9fe0bb; --warn-bg: #3a2f12; --warn-ink: #f2d28a; --bad-bg: #3d1d19; --bad-ink: #f4aaa0;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+}
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 20px; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: 26px; letter-spacing: 0.01em; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); margin: 0; }
+.sub { color: var(--ink-2); margin: 0; max-width: 80ch; }
+.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: var(--r); padding: 14px; min-width: 0; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; border: 1px solid var(--rule); background: var(--soft); border-radius: 6px; padding: 6px 12px; font-weight: 500; }
+button:hover:not(:disabled) { border-color: var(--ink-3); }
+button.primary { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+:focus-visible { outline: 2px solid var(--bic); outline-offset: 2px; }
+label.inline { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.hint { font-size: 12px; color: var(--ink-3); margin: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 370px); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.plate { display: grid; gap: 8px; }
+#arm { width: 100%; height: 600px; display: block; touch-action: none; cursor: grab; }
+#arm.dragging { cursor: grabbing; }
+.plate-foot { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; justify-content: space-between; font-size: 13px; color: var(--ink-2); }
+.key { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 5px; }
+
+.side { display: grid; gap: 12px; }
+.group { display: grid; gap: 10px; }
+.field { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+.field label { font-size: 13px; color: var(--ink-2); }
+.field .val { display: flex; align-items: center; gap: 4px; }
+.field input[type=number] { width: 80px; border: 1px solid var(--rule); background: var(--panel); border-radius: 5px; padding: 3px 6px; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.field .unit { font-size: 12px; color: var(--ink-3); width: 24px; }
+.field input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--ink-2); }
+.field .note { grid-column: 1 / -1; font-size: 12px; color: var(--ink-3); }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { text-align: center; padding: 6px 4px; font-size: 13px; cursor: pointer; border-left: 1px solid var(--rule); line-height: 1.25; }
+.seg label:first-of-type { border-left: 0; }
+.seg input:checked + label { background: var(--ink); color: var(--panel); }
+.seg input:focus-visible + label { outline: 2px solid var(--bic); outline-offset: -2px; }
+.answer { display: grid; gap: 8px; padding: 12px; background: var(--soft); border-radius: 6px; }
+.answer .big { font-family: var(--font-mono); font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.answer input[type=number] { width: 110px; border: 1px solid var(--rule); background: var(--panel); border-radius: 5px; padding: 5px 8px; text-align: right; font-family: var(--font-mono); }
+.fb { border-radius: 6px; padding: 8px 10px; font-size: 13px; }
+.fb.good { background: var(--good-bg); color: var(--good-ink); }
+.fb.warn { background: var(--warn-bg); color: var(--warn-ink); }
+.fb.bad { background: var(--bad-bg); color: var(--bad-ink); }
+
+.lower { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 1000px) { .lower { grid-template-columns: minmax(0, 1fr); } }
+.tablewrap { overflow-x: auto; margin-top: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { font-weight: 500; color: var(--ink-3); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+tr.sum td { font-weight: 600; border-bottom: 0; }
+tr.sep td { border-bottom: 2px solid var(--rule); }
+td .sub2 { display: block; font-size: 11px; color: var(--ink-3); white-space: normal; max-width: 240px; }
+.eqs { display: grid; gap: 10px; margin-top: 10px; }
+.eq { background: var(--soft); border-radius: 6px; padding: 10px 12px; display: grid; gap: 6px; min-width: 0; }
+.eq h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.eq .f { font-family: var(--font-mono); font-size: 13px; overflow-x: auto; white-space: nowrap; }
+.eq .f.dim { color: var(--ink-2); }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.tabs button { padding: 5px 10px; font-size: 13px; background: transparent; }
+.tabs button[aria-pressed=true] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--ink-2); margin-top: 10px; }
+.legend .line { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: 4px; margin-right: 6px; }
+.plotbox { position: relative; margin-top: 6px; }
+#plot { width: 100%; height: 280px; display: block; touch-action: none; }
+.tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.12); white-space: nowrap; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.notes p { margin: 0; max-width: 80ch; }
+.notes ul { margin: 0; padding-left: 18px; max-width: 80ch; display: grid; gap: 4px; }
+.plotwrap-msg { padding: 40px 12px; text-align: center; color: var(--ink-2); background: var(--soft); border-radius: 6px; margin-top: 10px; }
+@media (max-width: 520px) { #arm { height: 460px; } #plot { height: 240px; } h1 { font-size: 22px; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Elbow Flexor Torque Lab</h1>
+      <p class="sub">An isometric hold: the upper arm hangs vertically, and the forearm holds a weight still at a chosen angle. Three elbow flexors keep it there. Given two muscle forces, find the third.</p>
+    </div>
+  </header>
+
+  <div class="cols">
+    <section class="panel plate" aria-label="Arm diagram">
+      <canvas id="arm" role="img" aria-label="Side view of the right arm with the biceps, brachialis and brachioradialis holding a weight"></canvas>
+      <div class="plate-foot">
+        <div class="key">
+          <span><span class="sw" style="background:var(--bic)"></span>Biceps brachii</span>
+          <span><span class="sw" style="background:var(--bra)"></span>Brachialis</span>
+          <span><span class="sw" style="background:var(--brd)"></span>Brachioradialis</span>
+        </div>
+        <span>Drag the hand to change the angle.</span>
+      </div>
+      <div class="row" style="font-size:13px;color:var(--ink-2)">
+        <label class="inline" for="show-arms"><input type="checkbox" id="show-arms" checked> Moment arms</label>
+        <label class="inline" for="show-forces"><input type="checkbox" id="show-forces" checked> Force arrows</label>
+        <label class="inline" for="show-joint"><input type="checkbox" id="show-joint"> Joint reaction force</label>
+        <label class="inline" for="show-skin"><input type="checkbox" id="show-skin" checked> Skin outline</label>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="panel group">
+        <h2>Arm position and load</h2>
+        <div class="field"><label for="phi-n">Elbow flexion angle, φ</label><span class="val"><input id="phi-n" type="number" min="0" max="145" step="1"><span class="unit">°</span></span><input id="phi" type="range" min="0" max="145" step="1" aria-label="Elbow flexion angle"><span class="note" id="phi-note"></span></div>
+        <div class="field"><label for="mass-n">Mass held in the hand</label><span class="val"><input id="mass-n" type="number" min="0" max="20" step="0.5"><span class="unit">kg</span></span><input id="mass" type="range" min="0" max="20" step="0.5" aria-label="Mass held in the hand"></div>
+        <label class="inline" for="segs"><input type="checkbox" id="segs" checked> Include the weight of the forearm and hand</label>
+      </div>
+
+      <div class="panel group">
+        <h2>The problem</h2>
+        <div>
+          <p class="hint" style="margin-bottom:6px">Unknown muscle</p>
+          <div class="seg" role="radiogroup" aria-label="Unknown muscle">
+            <input type="radio" name="unk" id="u-bic" value="bic"><label for="u-bic">Biceps</label>
+            <input type="radio" name="unk" id="u-bra" value="bra"><label for="u-bra">Brachialis</label>
+            <input type="radio" name="unk" id="u-brd" value="brd"><label for="u-brd">Brachio&shy;radialis</label>
+          </div>
+        </div>
+        <div id="given"></div>
+        <div class="row">
+          <button type="button" id="random" class="primary">New random problem</button>
+        </div>
+        <p class="hint">The given forces come from a muscle model and change with the angle and the load. Change either one and the forces update.</p>
+      </div>
+
+      <div class="panel group">
+        <div class="row" style="justify-content:space-between"><h2 id="ans-title">Find the biceps force</h2>
+          <label class="inline" for="student"><input type="checkbox" id="student" checked> Student mode</label></div>
+        <div class="answer" id="answer"></div>
+        <button type="button" id="copy-problem">Copy problem as text</button>
+        <div class="hint" id="copy-status" role="status"></div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="lower">
+    <section class="panel" aria-label="Given data">
+      <h2>Forces and torques about the elbow</h2>
+      <div class="tablewrap" id="table"></div>
+      <p class="hint" style="margin-top:8px">Torques are about the elbow joint center. Positive torque flexes the elbow (counterclockwise in the diagram). Moment arm = perpendicular distance from the elbow to the force's line of action.</p>
+    </section>
+    <section class="panel" aria-label="Torque balance">
+      <h2>Torque balance</h2>
+      <div class="eqs" id="eqs"></div>
+    </section>
+  </div>
+
+  <section class="panel" aria-label="Graph">
+    <div class="row" style="justify-content:space-between">
+      <h2 id="plot-title">Muscle moment arms vs. elbow angle</h2>
+      <div class="tabs" role="group" aria-label="Graph">
+        <button type="button" data-g="arms" aria-pressed="true">Moment arms</button>
+        <button type="button" data-g="force" aria-pressed="false">Muscle forces</button>
+        <button type="button" data-g="fl" aria-pressed="false">Muscle strength</button>
+        <button type="button" data-g="torque" aria-pressed="false">Load torque</button>
+      </div>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="plotbox" id="plotbox">
+      <canvas id="plot" role="img" aria-label="Graph against elbow flexion angle"></canvas>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+    <div class="plotwrap-msg" id="plot-hidden" hidden>This graph would give the answer away. Check or reveal your answer to see it.</div>
+  </section>
+
+  <section class="panel notes" aria-label="Model">
+    <h2 style="margin-bottom:10px">About the model</h2>
+    <ul>
+      <li><b>Isometric means static.</b> The forearm does not rotate, so the net torque about the elbow is zero and the net force on the forearm is zero.</li>
+      <li><b>Geometry.</b> 2-D side view of a right arm with the palm up (forearm supinated). Elbow to grip 34 cm, elbow to wrist 26 cm, shoulder 30 cm above the elbow. Each muscle pulls in a straight line from its origin to its insertion.</li>
+      <li><b>Moment arms</b> come from the attachment points and change with angle. With these attachments they range from 1.4 to 4.4 cm (biceps), 0.7 to 2.3 cm (brachialis), and 1.4 to 6.7 cm (brachioradialis). Those ranges are in line with cadaver measurements (for example, Murray, Delp &amp; Buchanan, 1995).</li>
+      <li><b>Segments.</b> Forearm 1.10 kg with its center of mass 11 cm from the elbow; hand 0.42 kg at 33 cm (typical values for a 70 kg adult).</li>
+      <li><b>How the load is shared.</b> Many combinations of three muscle forces balance the same torque, so the model picks the one that keeps every muscle's activation as low as possible: it minimizes the sum of cubed activations (Crowninshield &amp; Brand, 1981), a common way to predict muscle forces. The result: a_i ∝ √(F0<sub>i</sub> r<sub>i</sub>), so muscles with more leverage and more available force do more of the work.</li>
+      <li><b>Why the forces change with angle.</b> Three things change as the elbow bends: the load's torque (W·d·sin φ), each muscle's moment arm, and each muscle's available force F0 = Fmax × f<sub>L</sub>. The force–length factor f<sub>L</sub> is greatest when the fibers are at their optimal length (set here at 90° flexion) and falls off when they are stretched or shortened. Maximum forces and optimal fiber lengths are approximate values from a widely used upper-limb model (Holzbaur et al., 2005): biceps 1060 N and 12.4 cm, brachialis 987 N and 8.6 cm, brachioradialis 262 N and 17.3 cm. Tendons are treated as rigid and the triceps as relaxed.</li>
+      <li><b>The given forces</b> are the model's values rounded to the nearest newton. The answer is calculated from those rounded values, so students' torque balance works out exactly.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+// MODEL-BEGIN
+const G = 9.81;
+const HUMERUS = 0.30, FOREARM = 0.26, GRIP = 0.34;   // m
+const SEGMENTS = [
+  { id: 'forearm', name: 'Forearm weight', m: 1.10, d: 0.11 },
+  { id: 'hand', name: 'Hand weight', m: 0.42, d: 0.33 },
+];
+// Coordinates: elbow joint center at the origin, x anterior (forward), y up along the vertical humerus.
+// O = origin on the humerus/scapula (fixed). Insertion lies d along the forearm and h toward its flexor side.
+const MUSCLES = [
+  { id: 'bic', name: 'Biceps brachii', short: 'Biceps', O: [0.015, 0.300], d: 0.042, h: 0.014, Fmax: 1060, lopt: 0.124,
+    origin: 'Scapula (supraglenoid tubercle, coracoid)', insertion: 'Radial tuberosity', belly: 0.034, tendon: [0.16, 0.16] },
+  { id: 'bra', name: 'Brachialis', short: 'Brachialis', O: [0.010, 0.100], d: 0.022, h: 0.006, Fmax: 987, lopt: 0.086,
+    origin: 'Anterior distal humerus', insertion: 'Ulnar tuberosity', belly: 0.030, tendon: [0.0, 0.22] },
+  { id: 'brd', name: 'Brachioradialis', short: 'Brachioradialis', O: [0.015, 0.065], d: 0.215, h: 0.012, Fmax: 262, lopt: 0.173,
+    origin: 'Lateral supracondylar ridge', insertion: 'Radial styloid process', belly: 0.022, tendon: [0.0, 0.42] },
+];
+
+// forearm unit vectors at flexion phi (deg): u along the forearm, n toward its flexor (palm) side
+function forearmFrame(phi) {
+  const p = phi * Math.PI / 180;
+  return { u: [Math.sin(p), -Math.cos(p)], n: [Math.cos(p), Math.sin(p)] };
+}
+function muscleGeometry(m, phi) {
+  const { u, n } = forearmFrame(phi);
+  const P = [m.d * u[0] + m.h * n[0], m.d * u[1] + m.h * n[1]];
+  const dx = m.O[0] - P[0], dy = m.O[1] - P[1], len = Math.hypot(dx, dy);
+  const f = [dx / len, dy / len];             // direction of pull on the forearm (toward the origin)
+  const r = P[0] * f[1] - P[1] * f[0];        // moment arm = z-component of P × f̂ (positive = flexor)
+  return { P, O: m.O, f, len, r };
+}
+function loadsAt(phi, mass, withSegs) {
+  const { u } = forearmFrame(phi);
+  const items = [{ id: 'load', name: 'Weight in hand', m: mass, d: GRIP }].concat(withSegs ? SEGMENTS : []);
+  return items.map(it => ({ ...it, W: it.m * G, lever: it.d * u[0], torque: -it.m * G * it.d * u[0], pos: [it.d * u[0], it.d * u[1]] }));
+}
+// Static equilibrium: Σ F_i r_i + Σ τ_loads = 0  →  solve for the unknown muscle force.
+function solveElbow(phi, mass, withSegs, unknown, known) {
+  const geo = {}; for (const m of MUSCLES) geo[m.id] = muscleGeometry(m, phi);
+  const loads = loadsAt(phi, mass, withSegs);
+  const tauLoad = -loads.reduce((s, l) => s + l.torque, 0);       // flexor torque the muscles must supply
+  let tauKnown = 0; for (const m of MUSCLES) if (m.id !== unknown) tauKnown += known[m.id] * geo[m.id].r;
+  const Fu = (tauLoad - tauKnown) / geo[unknown].r;
+  const forces = { ...known, [unknown]: Fu };
+  // joint reaction force exerted by the humerus on the forearm: R = −(Σ muscle forces + Σ weights)
+  let Rx = 0, Ry = 0;
+  for (const m of MUSCLES) { Rx -= forces[m.id] * geo[m.id].f[0]; Ry -= forces[m.id] * geo[m.id].f[1]; }
+  for (const l of loads) Ry += l.W;
+  return { geo, loads, tauLoad, tauKnown, Fu, forces, R: [Rx, Ry] };
+}
+// Force–length relation (Gaussian, width γ = 0.45): a muscle is strongest at its optimal fiber length.
+// The tendon is treated as rigid, with its length set so the fibers are optimal at 90° flexion,
+// near where elbow flexion strength peaks.
+const FL_GAMMA = 0.45;
+for (const m of MUSCLES) m.lt = muscleGeometry(m, 90).len - m.lopt;
+function forceLength(m, phi) {
+  const lf = muscleGeometry(m, phi).len - m.lt, lt = lf / m.lopt;
+  return { lf, ltilde: lt, fl: Math.exp(-((lt - 1) ** 2) / FL_GAMMA) };
+}
+// Load sharing: minimize Σ a_i³ (Crowninshield & Brand, 1981) subject to Σ a_i F0_i r_i = τ,
+// where F0_i = Fmax_i · fL_i(φ) is the muscle's available force at this angle.
+// Lagrange multipliers give a_i ∝ √(F0_i r_i), so F_i = a_i F0_i.
+function realisticForces(phi, mass, withSegs) {
+  const s = solveElbow(phi, mass, withSegs, 'bic', { bra: 0, brd: 0 });
+  const F0 = {}, rr = {}; let denom = 0;
+  for (const m of MUSCLES) { F0[m.id] = m.Fmax * forceLength(m, phi).fl; rr[m.id] = s.geo[m.id].r; denom += Math.pow(F0[m.id] * rr[m.id], 1.5); }
+  const k = Math.max(0, s.tauLoad) / denom, forces = {}, activation = {};
+  for (const m of MUSCLES) { activation[m.id] = k * Math.sqrt(F0[m.id] * rr[m.id]); forces[m.id] = activation[m.id] * F0[m.id]; }
+  return { activation, forces, F0 };
+}
+// MODEL-END
+
+/* ---------- state ---------- */
+const $ = id => document.getElementById(id);
+const MINUS = '−';
+const fixed = (x, d) => { if (!isFinite(x)) return '—'; const s = (Math.abs(x) < 0.5 * Math.pow(10, -d) ? 0 : x).toFixed(d); return s[0] === '-' ? MINUS + s.slice(1) : s; };
+const byId = Object.fromEntries(MUSCLES.map(m => [m.id, m]));
+const S = { phi: 90, mass: 5, segs: true, unknown: 'bic', known: { bic: 0, bra: 0, brd: 0 }, student: true, revealed: false, checked: null, graph: 'arms' };
+let C = {}, sol = null, dirty = true, hover = null;
+
+function readColors() {
+  const cs = getComputedStyle(document.documentElement), g = n => cs.getPropertyValue(n).trim();
+  C = { ink: g('--ink'), ink2: g('--ink-2'), ink3: g('--ink-3'), rule: g('--rule'), grid: g('--grid'), panel: g('--panel'), soft: g('--soft'),
+    skin: g('--skin'), skinEdge: g('--skin-edge'), bone: g('--bone'), boneEdge: g('--bone-edge'),
+    bic: g('--bic'), bra: g('--bra'), brd: g('--brd'), mono: g('--font-mono'), body: g('--font-body'), bad: g('--bad-ink') };
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readColors(); renderLegend(); dirty = true; });
+new MutationObserver(() => { readColors(); renderLegend(); dirty = true; }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
+
+const hidden = () => S.student && !S.revealed;
+
+/* ---------- controls ---------- */
+function bindField(key, d, onSet) {
+  const range = $(key), num = $(key + '-n');
+  range.addEventListener('input', () => { onSet(parseFloat(range.value)); });
+  num.addEventListener('change', () => {
+    let v = parseFloat(num.value); if (!isFinite(v)) v = parseFloat(range.value);
+    v = Math.min(Math.max(v, parseFloat(num.min)), parseFloat(num.max));
+    onSet(+v.toFixed(d));
+  });
+}
+bindField('phi', 0, v => { S.phi = v; changed(); });
+bindField('mass', 1, v => { S.mass = v; changed(); });
+$('segs').addEventListener('change', () => { S.segs = $('segs').checked; changed(); });
+document.querySelectorAll('input[name=unk]').forEach(el => el.addEventListener('change', () => {
+  S.unknown = el.value; changed();
+}));
+$('student').addEventListener('change', () => { S.student = $('student').checked; render(); });
+['show-arms', 'show-forces', 'show-joint', 'show-skin'].forEach(id => $(id).addEventListener('change', () => { dirty = true; }));
+
+function renderGiven() {
+  $('given').innerHTML = MUSCLES.filter(m => m.id !== S.unknown).map(m =>
+    `<div class="field"><span style="font-size:13px;color:var(--ink-2)"><span class="sw" style="background:var(--${m.id})"></span>${m.name} force (given)</span>
+      <span class="val"><b class="num" style="font-size:15px">${Math.round(S.known[m.id])}</b><span class="unit">N</span></span></div>`).join('');
+}
+function syncInputs() {
+  $('phi').value = S.phi; $('phi-n').value = S.phi;
+  $('mass').value = S.mass; $('mass-n').value = S.mass.toFixed(1);
+  $('segs').checked = S.segs;
+  document.querySelector(`input[name=unk][value=${S.unknown}]`).checked = true;
+  const inner = 180 - S.phi, fromH = S.phi - 90;
+  $('phi-note').textContent = `Angle between upper arm and forearm: ${inner}°. Forearm is ${fromH === 0 ? 'horizontal' : Math.abs(fromH) + '° ' + (fromH < 0 ? 'below' : 'above') + ' horizontal'}.`;
+}
+function changed() { S.revealed = false; S.checked = null; render(); }
+
+$('random').addEventListener('click', () => {
+  let phi, mass, unk;
+  do {
+    phi = 30 + 5 * Math.floor(Math.random() * 21);             // 30°–130°
+    mass = 2 + 0.5 * Math.floor(Math.random() * 21);           // 2–12 kg
+    unk = MUSCLES[Math.floor(Math.random() * 3)].id;
+  } while (phi === S.phi && mass === S.mass && unk === S.unknown);
+  S.phi = phi; S.mass = mass; S.unknown = unk;
+  changed();
+});
+
+/* ---------- answer panel ---------- */
+function renderAnswer() {
+  const m = byId[S.unknown], F = sol.Fu, box = $('answer');
+  $('ans-title').textContent = `Find the ${m.short.toLowerCase()} force`;
+  let html = '';
+  if (F < 0) {
+    html += `<div class="fb warn">No solution with a pulling ${m.short.toLowerCase()}. The two given muscles already supply ${fixed(sol.tauKnown, 2)} N·m, more than the ${fixed(sol.tauLoad, 2)} N·m needed, so the ${m.short.toLowerCase()} would have to push (${fixed(F, 0)} N). Muscles can only pull. In a real arm the triceps would contract to balance the extra torque. Lower the given forces or add weight.</div>`;
+    box.innerHTML = html; return;
+  }
+  if (hidden()) {
+    html += `<label for="guess" class="hint">Your answer for F<sub>${m.short.toLowerCase()}</sub></label>
+      <div class="row"><input id="guess" type="number" step="any" inputmode="decimal" placeholder="e.g. 350"><span>N</span>
+      <button type="button" id="check" class="primary">Check</button><button type="button" id="reveal">Reveal answer</button></div>`;
+    if (S.checked) html += `<div class="fb ${S.checked.cls}">${S.checked.msg}</div>`;
+  } else {
+    const F0 = sol.model.F0[m.id], pct = 100 * F / F0;
+    html += `<div class="hint">${m.name} force</div><div class="big">${fixed(F, 1)} N</div>
+      <div class="hint">${S.mass > 0 ? `That is ${fixed(F / (S.mass * G), 1)}× the weight in the hand. ` : ''}At ${S.phi}° this muscle can produce at most about ${fixed(F0, 0)} N, so it is working at ${fixed(pct, 0)}% of its maximum.</div>`;
+    if (pct > 100) html += `<div class="fb bad">More than the muscle's estimated maximum. A real person probably could not hold this.</div>`;
+    if (S.checked) html += `<div class="fb ${S.checked.cls}">${S.checked.msg}</div>`;
+    if (S.student) html += `<button type="button" id="hide-again">Hide the answer again</button>`;
+  }
+  box.innerHTML = html;
+  const g = $('guess');
+  if (g) {
+    g.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+    $('check').addEventListener('click', check);
+    $('reveal').addEventListener('click', () => { S.revealed = true; render(); });
+  }
+  const h = $('hide-again'); if (h) h.addEventListener('click', () => { S.revealed = false; S.checked = null; render(); });
+}
+function check() {
+  const v = parseFloat($('guess').value), F = sol.Fu;
+  if (!isFinite(v)) { S.checked = { cls: 'warn', msg: 'Type a number in newtons first.' }; renderAnswer(); return; }
+  const err = Math.abs(v - F) / Math.max(Math.abs(F), 1e-9);
+  if (err <= 0.02 || Math.abs(v - F) <= 1) { S.checked = { cls: 'good', msg: `Correct. The ${byId[S.unknown].short.toLowerCase()} force is ${fixed(F, 1)} N.` }; S.revealed = true; }
+  else if (err <= 0.06) S.checked = { cls: 'warn', msg: 'Close, within 6%. Check your rounding: keep at least three significant figures in the moment arms and torques.' };
+  else S.checked = { cls: 'bad', msg: 'Not yet. Find the total extensor torque from the weights (W × moment arm, where each moment arm is the horizontal distance from the elbow), subtract the torques of the two given muscles (F × r), then divide what is left by the unknown muscle’s moment arm.' };
+  render();
+}
+
+/* ---------- table and equations ---------- */
+function renderTable() {
+  const H = hidden();
+  let html = `<table><thead><tr><th>Force</th><th>Force (N)</th><th>Distance from joint (cm)</th><th>Moment arm (cm)</th><th>Torque (N·m)</th><th>% of max</th></tr></thead><tbody>`;
+  MUSCLES.forEach((m, i) => {
+    const g = sol.geo[m.id], F = sol.forces[m.id], unk = m.id === S.unknown;
+    const fStr = unk ? (H ? '<b>?</b>' : `<b>${fixed(F, 1)}</b>`) : fixed(F, 0);
+    const tStr = unk && H ? '?' : fixed(F * g.r, 3);
+    html += `<tr class="${i === 2 ? 'sep' : ''}"><td><span class="sw" style="background:var(--${m.id})"></span>${m.name}${unk ? ' (unknown)' : ''}<span class="sub2">${m.origin} → ${m.insertion}</span></td>
+      <td class="num">${fStr}</td><td class="num">—</td><td class="num">${fixed(g.r * 100, 2)}</td><td class="num">${tStr}</td><td class="num">${unk && H ? '?' : fixed(100 * F / sol.model.F0[m.id], 0) + '%'}</td></tr>`;
+  });
+  for (const l of sol.loads) {
+    html += `<tr><td>${l.name}<span class="sub2">${fixed(l.m, 2)} kg, measured along the forearm from the elbow</span></td>
+      <td class="num">${fixed(l.W, 2)}</td><td class="num">${fixed(l.d * 100, 0)}</td><td class="num">${H ? '?' : fixed(Math.abs(l.lever) * 100, 2)}</td><td class="num">${H ? '?' : fixed(l.torque, 3)}</td><td></td></tr>`;
+  }
+  const net = MUSCLES.reduce((s, m) => s + sol.forces[m.id] * sol.geo[m.id].r, 0) + sol.loads.reduce((s, l) => s + l.torque, 0);
+  html += `<tr class="sum"><td>Net torque</td><td></td><td></td><td></td><td class="num">${H ? '0 (that is the condition)' : fixed(net, 3)}</td><td></td></tr>`;
+  html += `</tbody></table>`;
+  $('table').innerHTML = html;
+}
+function renderEquations() {
+  const H = hidden(), u = S.unknown, m = byId[u];
+  const kn = MUSCLES.filter(x => x.id !== u);
+  const sym = id => `F<sub>${byId[id].short.slice(0, 3).toLowerCase()}</sub>`;
+  const rr = id => fixed(sol.geo[id].r, 4);
+  const sin = fixed(Math.sin(S.phi * Math.PI / 180), 4);
+  let html = `<div class="eq"><h3>Condition for an isometric hold</h3>
+    <div class="f">Στ<sub>elbow</sub> = 0 → flexor torque = extensor torque</div>
+    <div class="f dim">F<sub>bic</sub>r<sub>bic</sub> + F<sub>bra</sub>r<sub>bra</sub> + F<sub>brd</sub>r<sub>brd</sub> = ${H ? 'Σ W × (moment arm of each weight)' : 'Σ W·d·sin φ'}</div></div>`;
+  const loadTerms = sol.loads.map(l => `(${fixed(l.W, 2)})(${fixed(l.d, 2)})(${sin})`).join(' + ');
+  html += H ? `<div class="eq"><h3>Extensor torque from the weights</h3>
+    <div class="f">τ<sub>weights</sub> = Σ W × (moment arm) = ?</div>
+    <div class="f dim">Each weight's moment arm is the perpendicular (horizontal) distance from the elbow to its line of action. You are given distances along the forearm, so use the elbow angle to find it.</div></div>`
+    : `<div class="eq"><h3>Extensor torque from the weights (sin ${S.phi}° = ${sin})</h3>
+    <div class="f">${loadTerms}</div>
+    <div class="f dim">= ${fixed(sol.tauLoad, 3)} N·m</div></div>`;
+  html += `<div class="eq"><h3>Torque from the two given muscles</h3>
+    <div class="f">${kn.map(x => `(${fixed(sol.forces[x.id], 0)})(${rr(x.id)})`).join(' + ')}</div>
+    <div class="f dim">= ${fixed(sol.tauKnown, 3)} N·m</div></div>`;
+  html += `<div class="eq"><h3>Solve for ${m.short.toLowerCase()} (moment arm ${rr(u)} m)</h3>
+    <div class="f">${sym(u)} = (${H ? 'τ<sub>weights</sub>' : fixed(sol.tauLoad, 3)} ${MINUS} ${fixed(sol.tauKnown, 3)}) / ${rr(u)}</div>
+    <div class="f dim">${sym(u)} = ${H ? '?' : fixed(sol.Fu, 1) + ' N'}</div></div>`;
+  if (!H && sol.Fu >= 0) {
+    const R = Math.hypot(sol.R[0], sol.R[1]);
+    const ang = Math.atan2(sol.R[1], sol.R[0]) * 180 / Math.PI;
+    html += `<div class="eq"><h3>Force balance: joint reaction at the elbow</h3>
+      <div class="f">R = −(ΣF<sub>muscles</sub> + ΣW) = (${fixed(sol.R[0], 1)}, ${fixed(sol.R[1], 1)}) N</div>
+      <div class="f dim">|R| = ${fixed(R, 1)} N, pointing ${dirWords(ang)} (on the forearm, from the humerus)</div></div>`;
+  }
+  $('eqs').innerHTML = html;
+}
+function dirWords(a) {
+  const n = ((a % 360) + 360) % 360;
+  const names = ['forward', 'forward and up', 'up', 'back and up', 'back', 'back and down', 'down', 'forward and down'];
+  return names[Math.round(n / 45) % 8] + ` (${fixed(a, 0)}° from horizontal)`;
+}
+
+/* ---------- copy problem ---------- */
+$('copy-problem').addEventListener('click', async () => {
+  const m = byId[S.unknown];
+  const lines = [
+    `Elbow flexor problem (isometric hold)`,
+    `The upper arm hangs vertically. The elbow is flexed ${S.phi}° (forearm ${S.phi === 90 ? 'horizontal' : Math.abs(S.phi - 90) + '° ' + (S.phi < 90 ? 'below' : 'above') + ' horizontal'}). Palm up.`,
+    `A ${S.mass} kg mass is held ${GRIP * 100} cm from the elbow. Use g = 9.81 m/s².`,
+    S.segs ? `Forearm: ${SEGMENTS[0].m} kg, center of mass ${SEGMENTS[0].d * 100} cm from the elbow. Hand: ${SEGMENTS[1].m} kg, center of mass ${SEGMENTS[1].d * 100} cm from the elbow.` : `Ignore the weight of the forearm and hand.`,
+    `Moment arms about the elbow at this angle:`,
+    ...MUSCLES.map(x => `  ${x.name}: ${fixed(sol.geo[x.id].r * 100, 2)} cm`),
+    `Given: ${MUSCLES.filter(x => x.id !== S.unknown).map(x => `${x.name} force = ${Math.round(S.known[x.id])} N`).join('; ')}.`,
+    `Find the force in the ${m.name.toLowerCase()} needed to hold the weight still.`,
+  ];
+  const text = lines.join('\n');
+  try { await navigator.clipboard.writeText(text); $('copy-status').textContent = 'Problem copied. Paste it into a worksheet or slide.'; }
+  catch (e) { $('copy-status').textContent = 'Copying was blocked by the browser.'; }
+});
+
+/* ---------- arm drawing ---------- */
+function fitCanvas(cv) {
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+  return [ctx, w, h];
+}
+let view = null;
+function drawArm() {
+  const [ctx, W, H] = fitCanvas($('arm'));
+  // world window (m): fits every angle from 0° to 145° with the largest weight
+  const xmin = -0.16, xmax = 0.44, ymin = -0.44, ymax = 0.37;
+  const sc = Math.min(W / (xmax - xmin), H / (ymax - ymin));
+  const ox = (W - (xmax - xmin) * sc) / 2 - xmin * sc, oy = (H - (ymax - ymin) * sc) / 2 + ymax * sc;
+  const X = x => ox + x * sc, Y = y => oy - y * sc, pt = p => [X(p[0]), Y(p[1])];
+  view = { X, Y, sc, ox, oy };
+  const { u, n } = forearmFrame(S.phi);
+  const along = (d, h = 0) => [d * u[0] + h * n[0], d * u[1] + h * n[1]];
+  const wrist = along(FOREARM), grip = along(GRIP);
+
+  // skin silhouette
+  if ($('show-skin').checked) {
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const limb = (a, b, w) => { ctx.beginPath(); ctx.moveTo(...pt(a)); ctx.lineTo(...pt(b)); ctx.lineWidth = w * sc; ctx.stroke(); };
+    ctx.strokeStyle = C.skinEdge; limb([0.0, 0.29], [0, 0], 0.104); limb([0, 0], wrist, 0.084); limb(wrist, along(0.32), 0.07);
+    ctx.strokeStyle = C.skin; limb([0.0, 0.29], [0, 0], 0.098); limb([0, 0], wrist, 0.078); limb(wrist, along(0.32), 0.064);
+    // forearm taper: fill the wrist end narrower
+    ctx.fillStyle = C.skin; ctx.beginPath(); ctx.arc(...pt([0, 0.30]), 0.065 * sc, 0, 7); ctx.fill();
+  }
+
+  // bones
+  const bone = (a, b, w) => {
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = C.boneEdge; ctx.lineWidth = w * sc + 2; ctx.beginPath(); ctx.moveTo(...pt(a)); ctx.lineTo(...pt(b)); ctx.stroke();
+    ctx.strokeStyle = C.bone; ctx.lineWidth = w * sc; ctx.beginPath(); ctx.moveTo(...pt(a)); ctx.lineTo(...pt(b)); ctx.stroke();
+  };
+  const knob = (c, r) => { ctx.fillStyle = C.bone; ctx.strokeStyle = C.boneEdge; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(...pt(c), r * sc, 0, 7); ctx.fill(); ctx.stroke(); };
+  // scapula hint and humeral head
+  ctx.fillStyle = C.bone; ctx.strokeStyle = C.boneEdge; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(...pt([-0.05, 0.36])); ctx.lineTo(...pt([0.03, 0.335])); ctx.lineTo(...pt([0.035, 0.315])); ctx.lineTo(...pt([-0.04, 0.29])); ctx.lineTo(...pt([-0.07, 0.33])); ctx.closePath(); ctx.fill(); ctx.stroke();
+  knob([-0.004, 0.300], 0.024);
+  bone([0, 0.29], [0, 0.02], 0.020);
+  knob([0, 0.0], 0.019);
+  // ulna (with olecranon behind the elbow) and radius (flexor side)
+  bone(along(-0.018, -0.004), along(FOREARM, -0.004), 0.011);
+  bone(along(0.012, 0.007), along(FOREARM - 0.003, 0.008), 0.011);
+  knob(along(FOREARM + 0.004, 0.003), 0.010);
+  // hand: palm and fingers wrapped around the handle
+  ctx.fillStyle = C.bone; ctx.strokeStyle = C.boneEdge;
+  ctx.beginPath(); ctx.moveTo(...pt(along(FOREARM + 0.008, -0.012))); ctx.lineTo(...pt(along(GRIP + 0.008, -0.010)));
+  ctx.lineTo(...pt(along(GRIP + 0.008, 0.012))); ctx.lineTo(...pt(along(FOREARM + 0.008, 0.016))); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // weight (dumbbell seen end-on: a plate centered on the grip)
+  if (S.mass > 0) {
+    const rad = 0.022 + 0.0085 * Math.sqrt(S.mass);
+    ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(...pt(grip), rad * sc, 0, 7); ctx.fill();
+    ctx.fillStyle = C.ink3; ctx.beginPath(); ctx.arc(...pt(grip), rad * 0.45 * sc, 0, 7); ctx.fill();
+    ctx.fillStyle = C.panel; ctx.font = `600 ${Math.max(10, Math.min(14, rad * sc * 0.55))}px ${C.body}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(`${S.mass} kg`, X(grip[0]), Y(grip[1]) + rad * sc * 0.7);
+  }
+  ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(...pt(grip), 0.006 * sc, 0, 7); ctx.fill();
+
+  // muscles
+  for (const m of [byId.bra, byId.brd, byId.bic]) drawMuscle(ctx, m, sol.geo[m.id], pt, sc);
+
+  // flexion angle arc from straight-down to the forearm
+  const R = 0.055, a0 = Math.PI / 2, a1 = Math.PI / 2 - S.phi * Math.PI / 180;
+  ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.2; ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(0), Y(-0.09)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(X(0), Y(0), R * sc, a0, a1, true); ctx.stroke();
+  const am = (a0 + a1) / 2;
+  ctx.fillStyle = C.ink; ctx.font = `600 13px ${C.body}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (S.phi > 12) ctx.fillText(`φ = ${S.phi}°`, X(0) + Math.cos(am) * (R + 0.03) * sc, Y(0) + Math.sin(am) * (R + 0.03) * sc);
+
+  const H2 = hidden();
+  // moment arms
+  if ($('show-arms').checked) {
+    for (const m of MUSCLES) {
+      const g = sol.geo[m.id];
+      const t = g.P[0] * g.f[0] + g.P[1] * g.f[1];
+      const foot = [g.P[0] - t * g.f[0], g.P[1] - t * g.f[1]];
+      ctx.strokeStyle = C[m.id]; ctx.lineWidth = 1.3; ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(...pt(g.P)); ctx.lineTo(...pt(foot)); ctx.stroke(); // line of action extended
+      ctx.lineWidth = 2; ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(X(0), Y(0)); ctx.lineTo(...pt(foot)); ctx.stroke();
+      // right-angle mark
+      const s = 0.006, e1 = [-g.f[0] * s * Math.sign(t || 1), -g.f[1] * s * Math.sign(t || 1)], len = Math.hypot(foot[0], foot[1]) || 1, e2 = [-foot[0] / len * s, -foot[1] / len * s];
+      ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(...pt([foot[0] - e1[0], foot[1] - e1[1]])); ctx.lineTo(...pt([foot[0] - e1[0] + e2[0], foot[1] - e1[1] + e2[1]])); ctx.lineTo(...pt([foot[0] + e2[0], foot[1] + e2[1]])); ctx.stroke();
+    }
+    // load lever arm: horizontal distance from the elbow to the weight's line of action
+    if (S.mass > 0 && Math.abs(grip[0]) > 0.004) {
+      ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.2; ctx.setLineDash([5, 4]);
+      const yL = Math.min(-0.012, grip[1] - 0.075);
+      ctx.beginPath(); ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(0), Y(yL)); ctx.moveTo(X(grip[0]), Y(grip[1])); ctx.lineTo(X(grip[0]), Y(yL)); ctx.stroke(); ctx.setLineDash([]);
+      arrowLine(ctx, X(0), Y(yL), X(grip[0]), Y(yL), C.ink2, true);
+      ctx.fillStyle = C.ink; ctx.font = `12px ${C.mono}`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText(hidden() ? 'moment arm = ?' : `${fixed(Math.abs(grip[0]) * 100, 1)} cm`, X(grip[0] / 2), Y(yL) + 4);
+    }
+  }
+  // elbow center
+  ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(X(0), Y(0), 3.5, 0, 7); ctx.fill();
+
+  // force arrows: one scale for every force so the sizes compare honestly
+  if ($('show-forces').checked) {
+    const known = MUSCLES.map(m => Math.abs(sol.forces[m.id])).concat(sol.loads.map(l => l.W));
+    const Fref = Math.max(300, ...known.filter(isFinite));
+    const kL = 0.20 / Fref; // m of arrow per newton
+    for (const m of MUSCLES) {
+      const g = sol.geo[m.id], F = sol.forces[m.id], unk = m.id === S.unknown;
+      if (unk && (H2 || F < 0)) {
+        const L = 0.07, end = [g.P[0] + g.f[0] * L, g.P[1] + g.f[1] * L];
+        arrow(ctx, pt(g.P), pt(end), C[m.id], true);
+        label(ctx, pt(end), g.f, F < 0 && !H2 ? 'would push' : 'F = ?', C.ink);
+        continue;
+      }
+      if (F <= 0) continue;
+      const L = Math.max(0.012, F * kL), end = [g.P[0] + g.f[0] * L, g.P[1] + g.f[1] * L];
+      arrow(ctx, pt(g.P), pt(end), C[m.id], false);
+      label(ctx, pt(end), g.f, `${fixed(F, 0)} N`, C.ink);
+    }
+    for (const l of sol.loads) {
+      if (l.W <= 0) continue;
+      const L = Math.max(0.014, l.W * kL), start = l.pos, end = [l.pos[0], l.pos[1] - L];
+      arrow(ctx, pt(start), pt(end), C.ink2, false);
+      if (l.id === 'load') label(ctx, pt(end), [0, -1], `W = ${fixed(l.W, 1)} N`, C.ink);
+    }
+    if ($('show-joint').checked && !H2 && sol.Fu >= 0) {
+      const Rm = Math.hypot(sol.R[0], sol.R[1]), L = Math.max(0.012, Rm * kL);
+      const d = [sol.R[0] / Rm, sol.R[1] / Rm];
+      arrow(ctx, pt([0, 0]), pt([d[0] * L, d[1] * L]), C.ink, false);
+      label(ctx, pt([d[0] * L, d[1] * L]), d, `R = ${fixed(Rm, 0)} N`, C.ink);
+    }
+    // scale bar
+    const bar = 200 * kL * sc;
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(14, H - 16); ctx.lineTo(14 + bar, H - 16); ctx.stroke();
+    ctx.fillStyle = C.ink2; ctx.font = `11px ${C.mono}`; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; ctx.fillText('200 N', 14, H - 20);
+  }
+  // distance scale
+  ctx.strokeStyle = C.ink3; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(W - 14 - 0.1 * sc, H - 16); ctx.lineTo(W - 14, H - 16); ctx.stroke();
+  ctx.fillStyle = C.ink3; ctx.font = `11px ${C.mono}`; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillText('10 cm', W - 14, H - 20);
+  // labels for the humerus line
+  ctx.fillStyle = C.ink3; ctx.font = `11px ${C.body}`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  ctx.fillText('humerus', X(-0.06), Y(0.18));
+  ctx.textAlign = 'right'; ctx.fillText('elbow', X(-0.03), Y(0));
+}
+function drawMuscle(ctx, m, g, pt, sc) {
+  const O = g.O, P = g.P, dx = P[0] - O[0], dy = P[1] - O[1], len = Math.hypot(dx, dy);
+  const ux = dx / len, uy = dy / len, nx = -uy, ny = ux;
+  const t0 = m.tendon[0], t1 = 1 - m.tendon[1];
+  const w = m.belly / 2;
+  const pts = [];
+  const N = 24;
+  for (let i = 0; i <= N; i++) { const s = i / N, t = t0 + (t1 - t0) * s, half = w * Math.pow(Math.sin(Math.PI * s), 0.8); pts.push([O[0] + dx * t + nx * half, O[1] + dy * t + ny * half]); }
+  for (let i = N; i >= 0; i--) { const s = i / N, t = t0 + (t1 - t0) * s, half = w * Math.pow(Math.sin(Math.PI * s), 0.8); pts.push([O[0] + dx * t - nx * half, O[1] + dy * t - ny * half]); }
+  const col = C[m.id];
+  ctx.strokeStyle = col; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(...pt(O)); ctx.lineTo(...pt(P)); ctx.stroke();      // tendons + center line
+  ctx.globalAlpha = 0.78; ctx.fillStyle = col;
+  ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(...pt(p)) : ctx.moveTo(...pt(p))); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 1; ctx.strokeStyle = C.panel; ctx.lineWidth = 1; ctx.stroke();
+  // attachment dots
+  for (const p of [O, P]) { ctx.fillStyle = col; ctx.strokeStyle = C.panel; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(...pt(p), 4, 0, 7); ctx.fill(); ctx.stroke(); }
+}
+function arrowHead(ctx, x0, y0, x1, y1, size) {
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x1 - size * Math.cos(a - 0.4), y1 - size * Math.sin(a - 0.4)); ctx.lineTo(x1 - size * Math.cos(a + 0.4), y1 - size * Math.sin(a + 0.4)); ctx.closePath(); ctx.fill();
+}
+function arrow(ctx, a, b, col, dashed) {
+  ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 3; ctx.setLineDash(dashed ? [5, 4] : []);
+  const len = Math.hypot(b[0] - a[0], b[1] - a[1]), k = len > 12 ? (len - 9) / len : 0.2;
+  ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k); ctx.stroke(); ctx.setLineDash([]);
+  arrowHead(ctx, a[0], a[1], b[0], b[1], 11);
+}
+function arrowLine(ctx, x0, y0, x1, y1, col) {
+  ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  arrowHead(ctx, x1, y1, x0, y0, 7); arrowHead(ctx, x0, y0, x1, y1, 7);
+}
+function label(ctx, p, dir, text, col) {
+  ctx.font = `600 12px ${C.mono}`;
+  const w = ctx.measureText(text).width + 8, h = 18;
+  // keep the label inside the canvas (it slides along the edge instead of running off)
+  const cw = ctx.canvas.clientWidth, ch = ctx.canvas.clientHeight;
+  const x = Math.min(Math.max(2, p[0] + dir[0] * 10 + (dir[0] >= 0 ? 0 : -w)), cw - w - 2);
+  const y = Math.min(Math.max(2, p[1] - dir[1] * 10 - h / 2), ch - h - 2);
+  ctx.fillStyle = C.panel; ctx.globalAlpha = 0.88; ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1;
+  ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(text, x + 4, y + h / 2 + 0.5);
+}
+
+// drag the hand/forearm to set the angle
+const armEl = $('arm');
+let dragging = false;
+function angleFromEvent(e) {
+  const r = armEl.getBoundingClientRect(), x = (e.clientX - r.left - view.ox) / view.sc, y = -(e.clientY - r.top - view.oy) / view.sc;
+  return { phi: Math.atan2(x, -y) * 180 / Math.PI, dist: Math.hypot(x, y) };
+}
+armEl.addEventListener('pointerdown', e => {
+  const a = angleFromEvent(e);
+  if (a.dist < 0.06 || a.dist > 0.45) return;
+  if (Math.abs(a.phi - S.phi) > 25) return;
+  dragging = true; armEl.classList.add('dragging'); armEl.setPointerCapture(e.pointerId);
+});
+armEl.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  const v = Math.round(Math.min(145, Math.max(0, angleFromEvent(e).phi)));
+  if (v !== S.phi) { S.phi = v; changed(); }
+});
+const endDrag = () => { dragging = false; armEl.classList.remove('dragging'); };
+armEl.addEventListener('pointerup', endDrag); armEl.addEventListener('pointercancel', endDrag);
+
+/* ---------- graph ---------- */
+const GRAPHS = {
+  arms: { title: 'Muscle moment arms vs. elbow angle', axis: 'Moment arm (cm)', unit: 'cm', d: 2 },
+  force: { title: 'Muscle forces vs. elbow angle (this load)', axis: 'Force (N)', unit: 'N', d: 1 },
+  fl: { title: 'Available muscle force vs. elbow angle (force–length effect)', axis: '% of maximum force', unit: '%', d: 1 },
+  torque: { title: 'Extensor torque from the weights vs. elbow angle', axis: 'Torque (N·m)', unit: 'N·m', d: 3 },
+};
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+  S.graph = b.dataset.g;
+  document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  render();
+}));
+function graphSeries() {
+  if (S.graph === 'arms') return MUSCLES.map(m => ({ label: m.name, color: C[m.id], f: phi => muscleGeometry(m, phi).r * 100 }));
+  if (S.graph === 'force') return MUSCLES.map(m => ({ label: m.name, color: C[m.id], f: phi => realisticForces(phi, S.mass, S.segs).forces[m.id] }));
+  if (S.graph === 'fl') return MUSCLES.map(m => ({ label: m.name, color: C[m.id], f: phi => 100 * forceLength(m, phi).fl }));
+  return [{ label: 'Extensor torque from the weights', color: C.ink2, f: phi => solveElbow(phi, S.mass, S.segs, S.unknown, S.known).tauLoad }];
+}
+function renderLegend() {
+  if (!sol) return;
+  $('legend').innerHTML = graphSeries().map(s => `<span><span class="line" style="border-top-color:${s.color}"></span>${s.label}</span>`).join('');
+}
+function niceStep(span, count) {
+  const raw = span / count, mag = Math.pow(10, Math.floor(Math.log10(raw))), r = raw / mag;
+  return (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10) * mag;
+}
+function drawPlot() {
+  const blocked = (S.graph === 'force' || S.graph === 'torque') && hidden();
+  $('plot-hidden').hidden = !blocked; $('plotbox').hidden = blocked;
+  $('plot-title').textContent = GRAPHS[S.graph].title;
+  if (blocked) return;
+  const [ctx, W, H] = fitCanvas($('plot'));
+  const ser = graphSeries();
+  const xs = []; for (let p = 0; p <= 145; p += 1) xs.push(p);
+  const data = ser.map(s => xs.map(s.f));
+  let lo = 0, hi = 0; data.forEach(arr => arr.forEach(v => { if (v < lo) lo = v; if (v > hi) hi = v; }));
+  if (S.graph === 'fl') { lo = 0; hi = 100; }
+  if (hi - lo < 1e-9) hi = lo + 1;
+  if (S.graph !== 'fl') hi += (hi - lo) * 0.06; if (lo < 0) lo -= (hi - lo) * 0.04;
+  const ml = 62, mr = 14, mt = 10, mb = 38, pw = W - ml - mr, ph = H - mt - mb;
+  const ys = niceStep(hi - lo, 5); lo = Math.floor(lo / ys - 1e-9) * ys; hi = Math.ceil(hi / ys - 1e-9) * ys;
+  const X = p => ml + p / 145 * pw, Y = v => mt + (hi - v) / (hi - lo) * ph;
+  ctx.font = `11px ${C.mono}`; ctx.lineWidth = 1;
+  const yd = Math.max(0, -Math.floor(Math.log10(ys) + 1e-9));
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let v = lo; v <= hi + ys * 1e-6; v += ys) {
+    const y = Math.round(Y(v)) + 0.5; ctx.strokeStyle = Math.abs(v) < ys * 1e-6 ? C.ink3 : C.grid;
+    ctx.beginPath(); ctx.moveTo(ml, y); ctx.lineTo(ml + pw, y); ctx.stroke(); ctx.fillStyle = C.ink2; ctx.fillText(fixed(v, yd), ml - 6, y);
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let p = 0; p <= 145; p += pw > 500 ? 15 : 30) {
+    const x = Math.round(X(p)) + 0.5; ctx.strokeStyle = C.grid; ctx.beginPath(); ctx.moveTo(x, mt); ctx.lineTo(x, mt + ph); ctx.stroke();
+    ctx.fillStyle = C.ink2; ctx.fillText(p + '°', x, mt + ph + 5);
+  }
+  ctx.strokeStyle = C.ink3; ctx.beginPath(); ctx.moveTo(ml + 0.5, mt); ctx.lineTo(ml + 0.5, mt + ph); ctx.stroke();
+  ctx.fillStyle = C.ink2; ctx.font = `12px ${C.body}`; ctx.fillText('Elbow flexion angle φ (0° = arm straight)', ml + pw / 2, mt + ph + 21);
+  ctx.save(); ctx.translate(13, mt + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'middle'; ctx.fillText(GRAPHS[S.graph].axis, 0, 0); ctx.restore();
+  // current angle
+  ctx.strokeStyle = C.ink3; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(Math.round(X(S.phi)) + 0.5, mt); ctx.lineTo(Math.round(X(S.phi)) + 0.5, mt + ph); ctx.stroke(); ctx.setLineDash([]);
+  ctx.save(); ctx.beginPath(); ctx.rect(ml, mt, pw, ph); ctx.clip();
+  data.forEach((arr, k) => {
+    ctx.strokeStyle = ser[k].color; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.beginPath();
+    arr.forEach((v, i) => { const x = X(xs[i]), y = Y(v); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke();
+  });
+  ctx.restore();
+  data.forEach((arr, k) => { const v = ser[k].f(S.phi); if (v >= lo && v <= hi) { ctx.fillStyle = ser[k].color; ctx.strokeStyle = C.panel; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X(S.phi), Y(v), 4.5, 0, 7); ctx.fill(); ctx.stroke(); } });
+  // hover
+  const tip = $('tip');
+  if (hover) {
+    const p = Math.round(Math.min(145, Math.max(0, (hover.x - ml) / pw * 145)));
+    const x = X(p);
+    ctx.strokeStyle = C.ink3; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, mt); ctx.lineTo(Math.round(x) + 0.5, mt + ph); ctx.stroke();
+    const g = GRAPHS[S.graph];
+    tip.innerHTML = `<div style="color:var(--ink-2)">φ = ${p}°</div>` + ser.map(s => `<div><span class="sw" style="background:${s.color}"></span>${fixed(s.f(p), g.d)} ${g.unit}</div>`).join('');
+    tip.hidden = false;
+    const tw = tip.offsetWidth; tip.style.left = Math.max(0, x + 14 + tw > W ? x - 14 - tw : x + 14) + 'px'; tip.style.top = (mt + 6) + 'px';
+  } else tip.hidden = true;
+}
+$('plot').addEventListener('pointermove', e => { const r = $('plot').getBoundingClientRect(); hover = { x: e.clientX - r.left }; drawPlot(); });
+$('plot').addEventListener('pointerleave', () => { hover = null; drawPlot(); });
+
+/* ---------- render ---------- */
+function render() {
+  const model = realisticForces(S.phi, S.mass, S.segs);
+  // the two given forces are the model's values rounded to whole newtons; the unknown follows from them
+  for (const m of MUSCLES) S.known[m.id] = m.id === S.unknown ? 0 : Math.round(model.forces[m.id]);
+  sol = solveElbow(S.phi, S.mass, S.segs, S.unknown, S.known);
+  if (sol.Fu < 0) { // rounding up overshot a tiny torque; round the given forces down instead
+    for (const m of MUSCLES) if (m.id !== S.unknown) S.known[m.id] = Math.floor(model.forces[m.id]);
+    sol = solveElbow(S.phi, S.mass, S.segs, S.unknown, S.known);
+  }
+  sol.model = model;
+  renderGiven();
+  syncInputs(); renderAnswer(); renderTable(); renderEquations(); renderLegend(); drawPlot();
+  dirty = true;
+}
+function loop() { if (dirty) { dirty = false; drawArm(); } requestAnimationFrame(loop); }
+new ResizeObserver(() => { dirty = true; drawPlot(); }).observe($('arm'));
+
+readColors();
+render();
+if (document.fonts) document.fonts.ready.then(() => { readColors(); dirty = true; drawPlot(); });
+requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>

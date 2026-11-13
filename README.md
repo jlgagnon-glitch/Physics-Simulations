@@ -12,6 +12,8 @@ Everything runs in the browser: no installs or accounts needed.
 | [Motion Graphs Lab](https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html) | Reading position and velocity graphs (Lecture 6) | 20 questions |
 | [Constant Acceleration Lab](https://jlgagnon-glitch.github.io/Physics-Simulations/kinematics.html) | One-dimensional motion with constant acceleration (Lecture 7) | 20 questions |
 | [Air Track Collision Lab](https://jlgagnon-glitch.github.io/Physics-Simulations/air-track.html) | Collisions and explosions: momentum, kinetic energy, coefficient of restitution | Open lab with presets and data export |
+| [Elbow Flexor Torque Lab](https://jlgagnon-glitch.github.io/Physics-Simulations/elbow-torque.html) | Static equilibrium: torque balance at the elbow with three flexor muscles | Open lab with random problems and answer checking |
+| [Shoulder Abduction Torque Lab](https://jlgagnon-glitch.github.io/Physics-Simulations/shoulder-torque.html) | Static equilibrium: torque balance at the shoulder with the deltoid and supraspinatus | Open lab with random problems and answer checking |
 
 All of them on one page: **https://jlgagnon-glitch.github.io/Physics-Simulations/**
 
