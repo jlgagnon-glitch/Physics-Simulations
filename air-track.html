@@ -1,0 +1,1128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Air Track Collision Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: instrument bench — full-width track up top, control column left, analysis column right; stacks on phones. */
+:root {
+  --bg: #eef1f4;
+  --panel: #ffffff;
+  --ink: #15212c;
+  --ink-2: #4a5866;
+  --ink-3: #75828f;
+  --rule: #d6dce2;
+  --soft: #f4f6f8;
+  --metal-hi: #dfe4e9;
+  --metal: #b9c2cb;
+  --metal-lo: #8e99a4;
+  --stop: #3a4652;
+  --grid: #e6eaee;
+  --a: #2a78d6;
+  --b: #eb6834;
+  --sys: #1baf7a;
+  --warn-bg: #fff4d6;
+  --warn-ink: #6b4a00;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10151a; --panel: #171e25; --ink: #e5eaef; --ink-2: #a8b3be; --ink-3: #7c8792;
+    --rule: #2a333c; --soft: #1d252d; --metal-hi: #6d7883; --metal: #505b66; --metal-lo: #38424c;
+    --stop: #8995a1; --grid: #222b33; --a: #3987e5; --b: #d95926; --sys: #199e70;
+    --warn-bg: #3a2f12; --warn-ink: #f2d28a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10151a; --panel: #171e25; --ink: #e5eaef; --ink-2: #a8b3be; --ink-3: #7c8792;
+  --rule: #2a333c; --soft: #1d252d; --metal-hi: #6d7883; --metal: #505b66; --metal-lo: #38424c;
+  --stop: #8995a1; --grid: #222b33; --a: #3987e5; --b: #d95926; --sys: #199e70;
+  --warn-bg: #3a2f12; --warn-ink: #f2d28a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+}
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 20px; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: 26px; letter-spacing: 0.01em; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); margin: 0; }
+.sub { color: var(--ink-2); margin: 0; }
+.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: var(--r); padding: 14px; min-width: 0; }
+.mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* Track */
+.bench { display: grid; gap: 10px; }
+#track { width: 100%; height: 210px; display: block; }
+.transport { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.transport .scrub { flex: 1 1 220px; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.transport input[type=range] { flex: 1; min-width: 0; }
+.readouts { display: flex; flex-wrap: wrap; gap: 4px 22px; font-size: 13px; color: var(--ink-2); border-top: 1px solid var(--rule); padding-top: 10px; }
+.readouts b { font-weight: 500; color: var(--ink); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 5px; }
+.sw.a { background: var(--a); } .sw.b { background: var(--b); } .sw.sys { background: var(--sys); }
+.banner { background: var(--warn-bg); color: var(--warn-ink); border-radius: 6px; padding: 8px 12px; font-weight: 500; }
+
+/* Buttons and fields */
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; border: 1px solid var(--rule); background: var(--soft); border-radius: 6px; padding: 6px 12px; font-weight: 500; }
+button:hover:not(:disabled) { border-color: var(--ink-3); }
+button.primary { background: var(--ink); color: var(--panel); border-color: var(--ink); min-width: 84px; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+:focus-visible { outline: 2px solid var(--a); outline-offset: 2px; }
+select { border: 1px solid var(--rule); background: var(--panel); border-radius: 6px; padding: 5px 8px; }
+label.inline { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+
+.cols { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.controls { display: grid; gap: 12px; }
+.cart-card { display: grid; gap: 10px; }
+.cart-head { display: flex; align-items: center; gap: 8px; }
+.cart-head .tag { width: 22px; height: 22px; border-radius: 5px; color: #fff; display: grid; place-items: center; font-family: var(--font-display); font-weight: 600; }
+.tag.a { background: var(--a); } .tag.b { background: var(--b); }
+.field { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+.field label { font-size: 13px; color: var(--ink-2); }
+.field .val { display: flex; align-items: center; gap: 4px; }
+.field input[type=number] { width: 78px; border: 1px solid var(--rule); background: var(--panel); border-radius: 5px; padding: 3px 6px; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.field .unit { font-size: 12px; color: var(--ink-3); width: 30px; }
+.field input[type=range] { grid-column: 1 / -1; width: 100%; }
+input[type=range] { accent-color: var(--ink-2); }
+#cardA input[type=range] { accent-color: var(--a); }
+#cardB input[type=range] { accent-color: var(--b); }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { text-align: center; padding: 6px 4px; font-size: 13px; cursor: pointer; border-left: 1px solid var(--rule); line-height: 1.25; }
+.seg label:first-of-type { border-left: 0; }
+.seg.two { grid-auto-flow: row; grid-template-columns: 1fr 1fr; }
+.seg.two label:nth-of-type(odd) { border-left: 0; }
+.seg.two label:nth-of-type(n+3) { border-top: 1px solid var(--rule); }
+.seg input:checked + label { background: var(--ink); color: var(--panel); }
+.seg input:focus-visible + label { outline: 2px solid var(--a); outline-offset: -2px; }
+.group { display: grid; gap: 8px; }
+.hint { font-size: 12px; color: var(--ink-3); margin: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+
+/* Analysis */
+.analysis { display: grid; gap: 16px; min-width: 0; }
+.plot-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.tabs button { padding: 5px 10px; font-size: 13px; background: transparent; }
+.tabs button[aria-pressed=true] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--ink-2); margin-top: 10px; }
+.legend .line { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: 4px; margin-right: 6px; }
+.plotbox { position: relative; margin-top: 6px; }
+#plot { width: 100%; height: 320px; display: block; touch-action: none; }
+.tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.12); white-space: nowrap; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.plot-opts { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink-2); margin-top: 8px; }
+
+.results-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 1060px) { .results-grid { grid-template-columns: minmax(0, 1fr); } }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 5px 8px; text-align: right; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { font-weight: 500; color: var(--ink-3); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+tr.total td { font-weight: 600; }
+.checks { display: grid; gap: 8px; align-content: start; }
+.check { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 8px 10px; background: var(--soft); border-radius: 6px; font-size: 13px; }
+.check .k { color: var(--ink-2); }
+.check .v { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.check .note { grid-column: 1 / -1; color: var(--ink-3); font-size: 12px; }
+.empty { color: var(--ink-2); padding: 12px; background: var(--soft); border-radius: 6px; }
+
+.export textarea { width: 100%; height: 180px; font-family: var(--font-mono); font-size: 12px; border: 1px solid var(--rule); border-radius: 6px; background: var(--soft); padding: 8px; resize: vertical; }
+.status { font-size: 13px; color: var(--ink-2); min-height: 1.4em; }
+details > summary { cursor: pointer; font-weight: 500; }
+
+.physics { display: grid; gap: 14px; }
+.physics p { margin: 0; max-width: 72ch; }
+.eq-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 12px; }
+.eq { background: var(--soft); border-radius: 6px; padding: 10px 12px; display: grid; gap: 6px; min-width: 0; }
+.eq h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.eq .f { font-family: var(--font-mono); font-size: 13px; overflow-x: auto; white-space: nowrap; }
+.eq .f.sub2 { color: var(--ink-2); }
+@media (max-width: 520px) { #track { height: 180px; } #plot { height: 260px; } h1 { font-size: 22px; } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Air Track Collision Lab</h1>
+      <p class="sub">Two gliders on a frictionless 2.00 m air track. Positive velocity points to the right.</p>
+    </div>
+    <label class="inline" for="preset">Preset
+      <select id="preset">
+        <option value="">Choose a setup…</option>
+        <option value="equal-elastic">Equal masses, elastic (target at rest)</option>
+        <option value="equal-stick">Equal masses, stick together</option>
+        <option value="heavy-light">Heavy cart hits light cart at rest</option>
+        <option value="light-heavy">Light cart hits heavy cart at rest</option>
+        <option value="wall">Light cart hits a very heavy cart</option>
+        <option value="head-on">Head-on, equal and opposite, elastic</option>
+        <option value="head-on-stick">Head-on, equal and opposite, stick</option>
+        <option value="catch-up">Rear-end: fast cart catches slow cart</option>
+        <option value="partial">Partially elastic (e = 0.60)</option>
+        <option value="explode-equal">Explosion from rest, equal masses</option>
+        <option value="explode-unequal">Explosion from rest, A twice as heavy as B</option>
+      </select>
+    </label>
+  </header>
+
+  <section class="panel bench" aria-label="Air track">
+    <canvas id="track" role="img" aria-label="Animated air track showing cart A and cart B"></canvas>
+    <div id="banner" class="banner" hidden>Prediction time: the carts are touching. What will each velocity be after the collision? Press Play to find out.</div>
+    <div class="transport">
+      <button id="play" class="primary" type="button">Play</button>
+      <button id="reset" type="button">Reset</button>
+      <label class="inline" for="speed">Speed
+        <select id="speed">
+          <option value="0.1">0.1×</option>
+          <option value="0.25">0.25×</option>
+          <option value="0.5">0.5×</option>
+          <option value="1" selected>1×</option>
+          <option value="2">2×</option>
+        </select>
+      </label>
+      <div class="scrub">
+        <input id="scrub" type="range" min="0" max="1" step="0.001" value="0" aria-label="Time">
+        <span class="num" id="tread">0.000 s</span>
+      </div>
+    </div>
+    <div class="readouts" aria-live="off">
+      <span><span class="sw a"></span>v<sub>A</sub> <b id="rvA">—</b> m/s</span>
+      <span><span class="sw b"></span>v<sub>B</sub> <b id="rvB">—</b> m/s</span>
+      <span><span class="sw sys"></span>p<sub>total</sub> <b id="rp">—</b> kg·m/s</span>
+      <span>KE<sub>total</sub> <b id="rke">—</b> J</span>
+      <span id="endnote"></span>
+    </div>
+  </section>
+
+  <div class="cols">
+    <aside class="controls">
+      <div class="panel cart-card" id="cardA">
+        <div class="cart-head"><span class="tag a">A</span><h2>Cart A (left)</h2></div>
+        <div class="field"><label for="mA-n">Mass</label><span class="val"><input id="mA-n" type="number" min="0.05" max="2" step="0.01"><span class="unit">kg</span></span><input id="mA" type="range" min="0.05" max="2" step="0.01" aria-label="Cart A mass"></div>
+        <div class="field" id="vAfield"><label for="vA-n">Initial velocity</label><span class="val"><input id="vA-n" type="number" min="-1" max="1" step="0.01"><span class="unit">m/s</span></span><input id="vA" type="range" min="-1" max="1" step="0.01" aria-label="Cart A initial velocity"></div>
+        <div class="field"><label for="xA-n">Starting position (center)</label><span class="val"><input id="xA-n" type="number" min="0.10" max="1.70" step="0.01"><span class="unit">m</span></span><input id="xA" type="range" min="0.10" max="1.70" step="0.01" aria-label="Cart A starting position"></div>
+      </div>
+      <div class="panel cart-card" id="cardB">
+        <div class="cart-head"><span class="tag b">B</span><h2>Cart B (right)</h2></div>
+        <div class="field"><label for="mB-n">Mass</label><span class="val"><input id="mB-n" type="number" min="0.05" max="2" step="0.01"><span class="unit">kg</span></span><input id="mB" type="range" min="0.05" max="2" step="0.01" aria-label="Cart B mass"></div>
+        <div class="field" id="vBfield"><label for="vB-n">Initial velocity</label><span class="val"><input id="vB-n" type="number" min="-1" max="1" step="0.01"><span class="unit">m/s</span></span><input id="vB" type="range" min="-1" max="1" step="0.01" aria-label="Cart B initial velocity"></div>
+        <div class="field" id="xBfield"><label for="xB-n">Starting position (center)</label><span class="val"><input id="xB-n" type="number" min="0.30" max="1.90" step="0.01"><span class="unit">m</span></span><input id="xB" type="range" min="0.30" max="1.90" step="0.01" aria-label="Cart B starting position"></div>
+        <p class="hint" id="touch-hint" hidden>Starts at rest, touching cart A, with the latched spring between them.</p>
+      </div>
+
+      <div class="panel group">
+        <h2>Collision type</h2>
+        <div class="seg two" role="radiogroup" aria-label="Collision type">
+          <input type="radio" name="ctype" id="ct-el" value="elastic"><label for="ct-el">Perfectly elastic</label>
+          <input type="radio" name="ctype" id="ct-in" value="inelastic"><label for="ct-in">Completely inelastic</label>
+          <input type="radio" name="ctype" id="ct-cu" value="custom"><label for="ct-cu">Partially elastic</label>
+          <input type="radio" name="ctype" id="ct-ex" value="explosion"><label for="ct-ex">Explosion (push apart)</label>
+        </div>
+        <div class="field" id="efield"><label for="e-n">Coefficient of restitution, e</label><span class="val"><input id="e-n" type="number" min="0" max="1" step="0.01"><span class="unit"></span></span><input id="e" type="range" min="0" max="1" step="0.01" aria-label="Coefficient of restitution"></div>
+        <div class="field" id="Efield"><label for="E-n">Energy stored in the spring</label><span class="val"><input id="E-n" type="number" min="0.002" max="0.100" step="0.001"><span class="unit">J</span></span><input id="E" type="range" min="0.002" max="0.100" step="0.001" aria-label="Energy stored in the spring"></div>
+        <p class="hint" id="ctype-hint"></p>
+      </div>
+
+      <div class="panel group">
+        <h2>Bumper model</h2>
+        <div class="seg" role="radiogroup" aria-label="Bumper model">
+          <input type="radio" name="model" id="md-sp" value="spring"><label for="md-sp">Realistic (bumpers compress)</label>
+          <input type="radio" name="model" id="md-in" value="instant"><label for="md-in">Ideal (instantaneous)</label>
+        </div>
+        <div class="field" id="kfield"><label for="k-n">Bumper stiffness, k</label><span class="val"><input id="k-n" type="number" min="10" max="5000" step="1"><span class="unit">N/m</span></span><input id="k" type="range" min="0" max="1" step="0.001" aria-label="Bumper stiffness, soft to stiff"></div>
+        <p class="hint" id="model-hint"></p>
+      </div>
+
+      <div class="panel group">
+        <h2>Run settings</h2>
+        <div class="seg" role="radiogroup" aria-label="Track ends">
+          <input type="radio" name="ends" id="en-st" value="stop"><label for="en-st">Stop at track end</label>
+          <input type="radio" name="ends" id="en-bo" value="bounce"><label for="en-bo">Elastic end bumpers</label>
+        </div>
+        <div class="field" id="kendfield"><label for="kEnd-n">End spring stiffness</label><span class="val"><input id="kEnd-n" type="number" min="5" max="2000" step="1"><span class="unit">N/m</span></span><input id="kEnd" type="range" min="0" max="1" step="0.001" aria-label="End spring stiffness, soft to stiff"></div>
+        <p class="hint" id="kend-hint"></p>
+        <div class="row">
+          <label class="inline" for="tmax">Run length
+            <select id="tmax">
+              <option value="3">3 s</option><option value="5">5 s</option><option value="8">8 s</option>
+              <option value="10">10 s</option><option value="15">15 s</option><option value="20">20 s</option>
+            </select>
+          </label>
+        </div>
+        <label class="inline" for="showcm"><input type="checkbox" id="showcm"> Show center of mass on track</label>
+        <label class="inline" for="predict"><input type="checkbox" id="predict"> Prediction mode</label>
+        <p class="hint">Prediction mode pauses the moment the carts touch and hides the after-collision results until playback continues.</p>
+      </div>
+    </aside>
+
+    <div class="analysis">
+      <section class="panel" aria-label="Graph">
+        <div class="plot-head">
+          <h2 id="plot-title">Velocity vs. time</h2>
+          <div class="tabs" role="group" aria-label="Quantity to plot">
+            <button type="button" data-q="v" aria-pressed="true">Velocity</button>
+            <button type="button" data-q="p" aria-pressed="false">Momentum</button>
+            <button type="button" data-q="ke" aria-pressed="false">Kinetic energy</button>
+            <button type="button" data-q="x" aria-pressed="false">Position</button>
+            <button type="button" data-q="f" aria-pressed="false" id="tab-f" title="Switch to realistic bumpers to see contact forces">Force</button>
+          </div>
+        </div>
+        <div class="legend" id="legend"></div>
+        <div class="plotbox">
+          <canvas id="plot" role="img" aria-label="Graph of the selected quantity against time"></canvas>
+          <div class="tip" id="tip" hidden></div>
+        </div>
+        <div class="plot-opts">
+          <label class="inline" for="showsys"><input type="checkbox" id="showsys" checked> <span id="showsys-label">Show system line</span></label>
+          <label class="inline" for="ghost"><input type="checkbox" id="ghost" checked> Preview full run (faint)</label>
+          <label class="inline" for="zoom"><input type="checkbox" id="zoom"> Zoom in on the collision</label>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="Results">
+        <div class="plot-head"><h2>Before and after the collision</h2><span class="hint" id="res-note"></span></div>
+        <div id="results" style="margin-top:10px"></div>
+      </section>
+
+      <section class="panel export" aria-label="Export data">
+        <h2>Export data</h2>
+        <div class="row" style="margin-top:10px">
+          <label class="inline" for="rate">Sample rate
+            <select id="rate">
+              <option value="10">10 Hz</option><option value="20">20 Hz</option><option value="25">25 Hz</option>
+              <option value="50" selected>50 Hz</option><option value="100">100 Hz</option><option value="200">200 Hz</option>
+              <option value="500">500 Hz</option><option value="1000">1000 Hz</option>
+            </select>
+          </label>
+          <label class="inline" for="hdr"><input type="checkbox" id="hdr"> Include run settings above the data</label>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button type="button" id="copy-tsv">Copy for spreadsheet</button>
+          <button type="button" id="copy-csv">Copy as CSV</button>
+          <button type="button" id="dl-csv">Download .csv</button>
+        </div>
+        <p class="hint" style="margin-top:8px">“Copy for spreadsheet” uses tabs, so it pastes straight into columns in Excel, Google Sheets, Logger Pro, or Desmos tables. Columns: time, position, velocity, momentum, and kinetic energy for each cart, plus totals (and contact force with realistic bumpers).</p>
+        <div class="status" id="status" role="status"></div>
+        <details id="preview">
+          <summary>Show the data as text</summary>
+          <textarea id="csvtext" readonly aria-label="Exported data" style="margin-top:8px"></textarea>
+        </details>
+      </section>
+    </div>
+  </div>
+
+  <section class="panel physics" aria-label="The physics">
+    <h2>The physics in this run</h2>
+    <p>The track is level and frictionless, so no net external horizontal force acts on the two-cart system during the collision. Total momentum is therefore conserved in every collision type. Kinetic energy is conserved only when the collision is perfectly elastic. The coefficient of restitution <i>e</i> is the ratio of separation speed to approach speed: <i>e</i> = 1 is perfectly elastic and <i>e</i> = 0 means the carts stick together.</p>
+    <div class="eq-grid" id="eqs"></div>
+    <p class="hint" id="model-note"></p>
+  </section>
+</div>
+
+<script>
+// PHYSICS-BEGIN
+const REC_HZ = 1000;          // internal recording rate (samples per second)
+const TRACK = 2.0;            // track length, m
+const CART_L = 0.20;          // glider length including bumpers, m
+const BUMPER = 0.035;         // bumper length on each end, m
+const END_SPRING = 0.08;      // free length of each track-end spring, m
+const COIL_BIND_K = 40000;     // stiffness of a fully compressed (coil-bound) end spring, N/m
+
+// 1-D collision with coefficient of restitution e (e = 1 elastic, e = 0 stick).
+// Derived from conservation of momentum plus (vB' - vA') = -e (vB - vA).
+function finalVelocities(mA, uA, mB, uB, e) {
+  const M = mA + mB, P = mA * uA + mB * uB;
+  return [(P + mB * e * (uB - uA)) / M, (P + mA * e * (uA - uB)) / M];
+}
+
+// Explosion from rest: a latched spring releases energy E. Momentum stays zero and all of E becomes KE.
+function explosionVelocities(mA, mB, E) {
+  const M = mA + mB;
+  return [-Math.sqrt(2 * E * mB / (mA * M)), Math.sqrt(2 * E * mA / (mB * M))];
+}
+
+function newRecord() {
+  return { t: [], xA: [], vA: [], xB: [], vB: [], fA: [], events: [], endReason: 'time', stuck: false, endMax: 0 };
+}
+function rec(r, t, xA, vA, xB, vB, fA) {
+  r.t.push(t); r.xA.push(xA); r.vA.push(vA); r.xB.push(xB); r.vB.push(vB); r.fA.push(fA);
+}
+
+// Ideal model: event-driven, exact. Motion between events is uniform; collision times are solved analytically.
+function simulateInstant(p) {
+  const r = newRecord();
+  const h = p.L / 2, contact = p.L;
+  const ws = p.ends === 'bounce' ? END_SPRING : 0, lo = h + ws, hi = p.track - h - ws; // reflect at the end-spring tips
+  let t = 0, xA = p.xA, vA = p.uA, xB = p.xB, vB = p.uB, stuck = false, i = 0, latched = !!p.explode;
+  for (let guard = 0; guard < 200000; guard++) {
+    let dtEv = Infinity, ev = 'end';
+    if (latched) { dtEv = Math.max(0, p.explode.tRel - t); ev = 'release'; }
+    if (!stuck && vA > vB) { const d = Math.max(0, xB - xA - contact) / (vA - vB); if (d < dtEv) { dtEv = d; ev = 'cc'; } }
+    if (vA < 0) { const d = Math.max(0, xA - lo) / -vA; if (d < dtEv) { dtEv = d; ev = 'left'; } }
+    if (vB > 0) { const d = Math.max(0, hi - xB) / vB; if (d < dtEv) { dtEv = d; ev = 'right'; } }
+    let tEv = t + dtEv;
+    if (tEv >= p.tMax) { tEv = p.tMax; ev = 'end'; }
+    // record grid samples before the event (through tMax at the end of the run)
+    for (;;) {
+      const ts = i / REC_HZ;
+      if (ev === 'end' ? ts > tEv + 1e-9 : ts >= tEv - 1e-12) break;
+      const dt = ts - t;
+      rec(r, ts, xA + vA * dt, vA, xB + vB * dt, vB, 0);
+      i++;
+    }
+    xA += vA * (tEv - t); xB += vB * (tEv - t); t = tEv;
+    if (ev === 'end') break;
+    if (ev === 'release') {
+      latched = false;
+      const [a, b] = explosionVelocities(p.mA, p.mB, p.explode.E);
+      r.events.push({ kind: 'explosion', t0: t, t1: t, vA0: vA, vB0: vB, vA1: vA + a, vB1: vB + b, J: p.mB * b, Fmax: null, dmax: null });
+      vA += a; vB += b;
+    } else if (ev === 'cc') {
+      const uA = vA, uB = vB;
+      let [a, b] = finalVelocities(p.mA, vA, p.mB, vB, p.e);
+      if (p.e === 0) { stuck = true; b = a; }
+      vA = a; vB = b; xB = xA + contact;
+      r.events.push({ t0: t, t1: t, vA0: uA, vB0: uB, vA1: vA, vB1: vB, J: p.mB * (vB - uB), Fmax: null, dmax: null });
+    } else if (ev === 'left') {
+      xA = lo; if (stuck) xB = xA + contact;
+      if (p.ends === 'stop') { rec(r, t, xA, vA, xB, vB, 0); r.endReason = 'Cart A reached the left end'; break; }
+      vA = -vA; if (stuck) vB = vA;
+    } else {
+      xB = hi; if (stuck) xA = xB - contact;
+      if (p.ends === 'stop') { rec(r, t, xA, vA, xB, vB, 0); r.endReason = 'Cart B reached the right end'; break; }
+      vB = -vB; if (stuck) vA = vB;
+    }
+  }
+  r.stuck = stuck;
+  return r;
+}
+
+// Spring-bumper model: the bumpers act as one effective spring of stiffness k while compressed.
+// Loading follows F = k·d. Unloading follows a steeper line of slope k/e², so the energy returned
+// is exactly e² of the energy stored and the separation speed is e times the approach speed.
+// With e = 0 the carts latch (Velcro) at maximum compression. The track-end bumpers (bounce mode)
+// are elastic coil springs (stiffness kEnd, free length END_SPRING) that turn very stiff once fully
+// compressed. Integrated with velocity Verlet.
+function simulateSpring(p) {
+  const r = newRecord();
+  const { mA, mB, k, e } = p;
+  const h = p.L / 2, contact = p.L, M = mA + mB, bounce = p.ends === 'bounce';
+  const mu = mA * mB / M;
+  const kEnd = p.kEnd, kBind = Math.max(COIL_BIND_K, 50 * kEnd);
+  let Tc = Math.PI * Math.sqrt(mu / k);                   // cart-cart contact time for e = 1
+  if (bounce) Tc = Math.min(Tc, Math.PI * Math.sqrt(Math.min(mA, mB) / kBind));
+  const sub = Math.max(20, Math.ceil(2000 / (Tc * REC_HZ))); // ≥ 2000 steps per contact
+  const dt = 1 / (REC_HZ * sub);
+  const k2 = e > 0 ? k / (e * e) : Infinity;
+  let xA = p.xA, vA = p.uA, xB = p.xB, vB = p.uB, phase = p.explode ? 'latched' : 'free', dmax = 0, stuck = false, ev = null;
+  // explosion plunger: a spring of stiffness k compressed by d0 stores E = ½·k·d0²
+  const d0 = p.explode ? Math.sqrt(2 * p.explode.E / k) : 0;
+  const tRelStep = p.explode ? Math.round(p.explode.tRel * REC_HZ * sub) : -1;
+  const force = d => phase === 'load' ? Math.max(0, k * d)
+    : phase === 'plunger' ? Math.max(0, k * (d0 + d))
+    : phase === 'unload' ? Math.max(0, k * dmax - k2 * (dmax - d)) : 0;
+  // end spring compressed by c; past its free length the coils bind and it gets much stiffer
+  const endForce = c => {
+    if (c <= 0) return 0;
+    if (c > r.endMax) r.endMax = c;
+    return c <= END_SPRING ? kEnd * c : kEnd * END_SPRING + kBind * (c - END_SPRING);
+  };
+  // accelerations from the cart-cart force F plus the end springs
+  const accel = F => {
+    const wl = bounce ? endForce(END_SPRING - (xA - h)) : 0;
+    const wr = bounce ? endForce(xB + h - (p.track - END_SPRING)) : 0;
+    if (stuck) { const a = (wl - wr) / M; return [a, a]; }
+    return [(wl - F) / mA, (F - wr) / mB];
+  };
+  let F = 0, acc = accel(0); // F: compressive force, pushes A left (−F) and B right (+F)
+  const endEvent = t => { ev.t1 = t; ev.vA1 = vA; ev.vB1 = vB; r.events.push(ev); ev = null; };
+  const nRec = Math.round(p.tMax * REC_HZ);
+  rec(r, 0, xA, vA, xB, vB, 0);
+  outer:
+  for (let i = 1; i <= nRec; i++) {
+    for (let s = 0; s < sub; s++) {
+      const step = (i - 1) * sub + s, t = (step + 1) * dt;
+      if (step === tRelStep) {
+        phase = 'plunger';
+        ev = { kind: 'explosion', t0: step * dt, vA0: vA, vB0: vB, J: 0, Fmax: 0, dmax: 0 };
+        F = force(contact - (xB - xA)); acc = accel(F);
+      }
+      vA += acc[0] * dt / 2; vB += acc[1] * dt / 2;
+      xA += vA * dt; xB += vB * dt;
+      const d = contact - (xB - xA);
+      if (phase === 'free' && !stuck && d > 0) {
+        phase = 'load';
+        const rel = vA - vB;
+        ev = { t0: t - (rel > 0 ? d / rel : 0), vA0: vA, vB0: vB, J: 0, Fmax: 0, dmax: 0 };
+      }
+      const F1 = force(d);
+      acc = accel(F1);
+      vA += acc[0] * dt / 2; vB += acc[1] * dt / 2;
+      if (ev) { ev.J += (F + F1) / 2 * dt; if (F1 > ev.Fmax) ev.Fmax = F1; }
+      F = F1;
+      if (phase === 'load' && vA - vB <= 0) {
+        dmax = d; ev.dmax = d;
+        if (e === 0) {
+          const vc = (mA * vA + mB * vB) / M;
+          ev.J += mB * (vc - vB);
+          vA = vB = vc; stuck = true; phase = 'stuck'; F = 0; acc = accel(0);
+          endEvent(t);
+        } else { phase = 'unload'; F = force(d); acc = accel(F); }
+      } else if ((phase === 'unload' || phase === 'plunger') && F <= 0) {
+        phase = 'free'; F = 0; acc = accel(0); endEvent(t);
+      }
+      if (!bounce) {
+        if (xA - h <= 0 && vA < 0) { rec(r, t, xA, vA, xB, vB, -F); r.endReason = 'Cart A reached the left end'; break outer; }
+        if (xB + h >= p.track && vB > 0) { rec(r, t, xA, vA, xB, vB, -F); r.endReason = 'Cart B reached the right end'; break outer; }
+      }
+    }
+    rec(r, i / REC_HZ, xA, vA, xB, vB, -F);
+  }
+  r.stuck = stuck;
+  return r;
+}
+
+// p.explode = { E, tRel } starts the carts touching with a latched spring that releases at tRel.
+function simulate(p) { return p.model === 'spring' ? simulateSpring(p) : simulateInstant(p); }
+// PHYSICS-END
+
+/* ---------- UI ---------- */
+const $ = id => document.getElementById(id);
+const MINUS = '−';
+const P = { mA: 0.25, vA: 0.40, xA: 0.40, mB: 0.25, vB: 0.00, xB: 1.20, type: 'elastic', e: 0.60, model: 'spring', k: 40, kEnd: 30, E: 0.020, ends: 'stop', tMax: 8 };
+const PRESETS = {
+  'equal-elastic': { mA: 0.25, vA: 0.40, xA: 0.40, mB: 0.25, vB: 0, xB: 1.20, type: 'elastic' },
+  'equal-stick':   { mA: 0.25, vA: 0.40, xA: 0.40, mB: 0.25, vB: 0, xB: 1.20, type: 'inelastic' },
+  'heavy-light':   { mA: 0.50, vA: 0.40, xA: 0.40, mB: 0.25, vB: 0, xB: 1.00, type: 'elastic' },
+  'light-heavy':   { mA: 0.25, vA: 0.40, xA: 0.40, mB: 0.50, vB: 0, xB: 1.00, type: 'elastic' },
+  'wall':          { mA: 0.10, vA: 0.40, xA: 0.40, mB: 2.00, vB: 0, xB: 1.00, type: 'elastic' },
+  'head-on':       { mA: 0.25, vA: 0.30, xA: 0.40, mB: 0.25, vB: -0.30, xB: 1.60, type: 'elastic' },
+  'head-on-stick': { mA: 0.25, vA: 0.30, xA: 0.40, mB: 0.25, vB: -0.30, xB: 1.60, type: 'inelastic' },
+  'catch-up':      { mA: 0.25, vA: 0.50, xA: 0.30, mB: 0.25, vB: 0.15, xB: 0.80, type: 'elastic' },
+  'explode-equal':   { mA: 0.25, mB: 0.25, xA: 0.90, type: 'explosion', E: 0.020 },
+  'explode-unequal': { mA: 0.50, mB: 0.25, xA: 0.90, type: 'explosion', E: 0.020 },
+  'partial':       { mA: 0.25, vA: 0.40, xA: 0.40, mB: 0.35, vB: -0.10, xB: 1.20, type: 'custom', e: 0.60 },
+};
+
+let sim = null, tEnd = 0, tp = 0, playing = false, lastTs = 0, pausedForPredict = false, dirty = true;
+let quantity = 'v', hover = null, C = {};
+
+const isExp = () => P.type === 'explosion';
+// explosion runs treat any later cart-cart collision as elastic
+const eff = () => P.type === 'elastic' || P.type === 'explosion' ? 1 : P.type === 'inelastic' ? 0 : P.e;
+const fixed = (x, d) => { if (!isFinite(x)) return '—'; let s = (Math.abs(x) < 0.5 * Math.pow(10, -d) ? 0 : x).toFixed(d); return s[0] === '-' ? MINUS + s.slice(1) : s; };
+const signed = (x, d) => { const s = fixed(x, d); return (s[0] !== MINUS && parseFloat(s) !== 0 ? '+' : '') + s; };
+
+/* parameter controls */
+const pairs = [['mA', 2], ['vA', 2], ['xA', 2], ['mB', 2], ['vB', 2], ['xB', 2], ['e', 2], ['E', 3]];
+const TREL = 0.5;             // explosion: latch releases at this time, s
+// stiffness slider is logarithmic: 10 N/m (soft, long contact) to 5000 N/m (stiff, brief contact)
+const K_MIN = 10, K_MAX = 5000;
+const kFromSlider = s => { const k = K_MIN * Math.pow(K_MAX / K_MIN, s); return k < 100 ? Math.round(k) : Math.round(k / 5) * 5; };
+const sliderFromK = k => Math.log(k / K_MIN) / Math.log(K_MAX / K_MIN);
+function syncInputs() {
+  for (const [key, d] of pairs) { $(key).value = P[key]; $(key + '-n').value = Number(P[key]).toFixed(d); }
+  $('k').value = sliderFromK(P.k); $('k-n').value = P.k;
+  $('kEnd').value = Math.log(P.kEnd / 5) / Math.log(400); $('kEnd-n').value = P.kEnd;
+  $('kendfield').hidden = P.ends !== 'bounce' || P.model !== 'spring';
+  const tw = Math.PI * Math.sqrt(Math.min(P.mA, P.mB) / P.kEnd);
+  $('kend-hint').textContent = P.ends !== 'bounce' ? 'Carts stop when they reach the end of the track.'
+    : P.model === 'spring' ? `Each end has an ${END_SPRING * 100} cm coil spring. A cart stays on it for about ${Math.round(tw * 1000)}–${Math.round(Math.PI * Math.sqrt(Math.max(P.mA, P.mB) / P.kEnd) * 1000)} ms before it rebounds.`
+    : `Each end has an ${END_SPRING * 100} cm spring. In the ideal model, carts rebound instantly when they reach the spring tip.`;
+  document.querySelector(`input[name=ctype][value=${P.type}]`).checked = true;
+  document.querySelector(`input[name=model][value=${P.model}]`).checked = true;
+  document.querySelector(`input[name=ends][value=${P.ends}]`).checked = true;
+  $('tmax').value = String(P.tMax);
+  $('efield').hidden = P.type !== 'custom';
+  $('Efield').hidden = !isExp();
+  ['vAfield', 'vBfield', 'xBfield'].forEach(id => { $(id).hidden = isExp(); });
+  $('touch-hint').hidden = !isExp();
+  $('kfield').hidden = P.model !== 'spring';
+  $('ctype-hint').textContent = P.type === 'elastic' ? 'Bumpers return all of the kinetic energy (e = 1).'
+    : P.type === 'inelastic' ? 'Velcro pads: the carts lock together and move as one (e = 0).'
+    : isExp() ? `A compressed spring between the carts is latched, then released at t = ${TREL.toFixed(2)} s. Any later collisions are elastic.`
+    : 'Some kinetic energy becomes heat and sound; the carts still separate.';
+  const tc = Math.PI * Math.sqrt(P.mA * P.mB / (P.mA + P.mB) / P.k) * (1 + eff()) / 2;
+  const tp0 = Math.PI / 2 * Math.sqrt(P.mA * P.mB / (P.mA + P.mB) / P.k);
+  $('model-hint').textContent = P.model === 'spring' && isExp()
+    ? `The released spring (stiffness k) pushes for about ${Math.round(tp0 * 1000)} ms with these masses, so the carts speed up smoothly. Softer springs push longer but more gently.`
+    : P.model === 'spring'
+    ? `The bumpers compress and push the carts apart over about ${Math.round(tc * 1000)} ms with these masses, so velocity and momentum change smoothly. Softer bumpers (lower k) make the collision last longer.`
+    : 'Velocities change in a single instant at the moment of contact, like a textbook problem.';
+  $('tab-f').disabled = P.model !== 'spring';
+  if (P.model !== 'spring' && quantity === 'f') setQuantity('v');
+}
+function keepApart(changed) {
+  const ws = P.ends === 'bounce' ? END_SPRING : 0, lo = CART_L / 2 + ws, hi = TRACK - CART_L / 2 - ws;
+  P.xA = +Math.min(Math.max(P.xA, lo), hi - CART_L).toFixed(2);
+  P.xB = +Math.min(Math.max(P.xB, lo + CART_L), hi).toFixed(2);
+  if (isExp()) { P.xB = +(P.xA + CART_L).toFixed(2); if (P.xB > hi) { P.xB = hi; P.xA = +(hi - CART_L).toFixed(2); } return; }
+  if (P.xB - P.xA < CART_L - 1e-9) {
+    if (changed === 'xB') P.xA = +(P.xB - CART_L).toFixed(2); else P.xB = +(P.xA + CART_L).toFixed(2);
+  }
+}
+for (const [key, d] of pairs) {
+  const range = $(key), num = $(key + '-n');
+  range.addEventListener('input', () => { P[key] = parseFloat(range.value); afterChange(key); });
+  num.addEventListener('change', () => {
+    let v = parseFloat(num.value);
+    if (!isFinite(v)) v = P[key];
+    v = Math.min(Math.max(v, parseFloat(num.min)), parseFloat(num.max));
+    P[key] = +v.toFixed(d); afterChange(key);
+  });
+}
+$('k').addEventListener('input', () => { P.k = kFromSlider(parseFloat($('k').value)); afterChange('k'); });
+$('k-n').addEventListener('change', () => {
+  let v = parseFloat($('k-n').value); if (!isFinite(v)) v = P.k;
+  P.k = Math.round(Math.min(Math.max(v, K_MIN), K_MAX)); afterChange('k');
+});
+$('kEnd').addEventListener('input', () => { const v = 5 * Math.pow(400, parseFloat($('kEnd').value)); P.kEnd = v < 100 ? Math.round(v) : Math.round(v / 5) * 5; afterChange('kEnd'); });
+$('kEnd-n').addEventListener('change', () => {
+  let v = parseFloat($('kEnd-n').value); if (!isFinite(v)) v = P.kEnd;
+  P.kEnd = Math.round(Math.min(Math.max(v, 5), 2000)); afterChange('kEnd');
+});
+function afterChange(key) {
+  keepApart(key);
+  $('preset').value = '';
+  syncInputs(); scheduleRun();
+}
+document.querySelectorAll('input[name=ctype]').forEach(el => el.addEventListener('change', () => { P.type = el.value; afterChange('type'); }));
+document.querySelectorAll('input[name=model]').forEach(el => el.addEventListener('change', () => { P.model = el.value; afterChange('model'); }));
+document.querySelectorAll('input[name=ends]').forEach(el => el.addEventListener('change', () => { P.ends = el.value; afterChange('ends'); }));
+$('tmax').addEventListener('change', () => { P.tMax = parseFloat($('tmax').value); afterChange('tMax'); });
+$('preset').addEventListener('change', () => {
+  const pr = PRESETS[$('preset').value]; if (!pr) return;
+  Object.assign(P, pr); keepApart('xA'); syncInputs(); scheduleRun();
+});
+
+let runQueued = false;
+function scheduleRun() { if (runQueued) return; runQueued = true; requestAnimationFrame(() => { runQueued = false; run(); }); }
+
+function run() {
+  const exp = isExp();
+  sim = simulate({ mA: P.mA, mB: P.mB, uA: exp ? 0 : P.vA, uB: exp ? 0 : P.vB, explode: exp ? { E: P.E, tRel: TREL } : null, xA: P.xA, xB: P.xB, L: CART_L, track: TRACK,
+    e: eff(), model: P.model, k: P.k, kEnd: P.kEnd, ends: P.ends, tMax: P.tMax });
+  tEnd = sim.t[sim.t.length - 1];
+  $('scrub').max = tEnd.toFixed(3);
+  tp = 0; playing = false; pausedForPredict = false;
+  renderResults(); renderEquations(); buildExport();
+  $('endnote').textContent = sim.endReason === 'time' ? '' : `Run ends at ${fixed(tEnd, 3)} s: ${sim.endReason.charAt(0).toLowerCase() + sim.endReason.slice(1)}.`;
+  dirty = true;
+}
+
+/* playback */
+const firstEv = () => sim && sim.events[0];
+function hideAfter() { const ev = firstEv(); return $('predict').checked && ev && tp < ev.t1 + 1e-9 && !(tp >= tEnd); }
+$('play').addEventListener('click', () => {
+  if (playing) { playing = false; }
+  else { if (tp >= tEnd - 1e-9) { tp = 0; pausedForPredict = false; } playing = true; lastTs = performance.now(); }
+  dirty = true;
+});
+$('reset').addEventListener('click', () => { playing = false; tp = 0; pausedForPredict = false; dirty = true; });
+$('scrub').addEventListener('input', () => {
+  playing = false; tp = parseFloat($('scrub').value);
+  const ev = firstEv(); if (ev && tp < ev.t0) pausedForPredict = false; else pausedForPredict = true;
+  dirty = true;
+});
+['showcm', 'showsys', 'ghost', 'zoom', 'predict'].forEach(id => $(id).addEventListener('change', () => { if (id === 'predict') pausedForPredict = false; renderResults(); renderEquations(); dirty = true; }));
+
+function tick(ts) {
+  if (playing) {
+    const dt = Math.min(0.1, (ts - lastTs) / 1000); lastTs = ts;
+    let nt = tp + dt * parseFloat($('speed').value);
+    const ev = firstEv();
+    if ($('predict').checked && ev && !pausedForPredict && tp < ev.t0 && nt >= ev.t0) {
+      nt = ev.t0; playing = false; pausedForPredict = true;
+    }
+    if (nt >= tEnd) { nt = tEnd; playing = false; }
+    tp = nt; dirty = true;
+  }
+  if (dirty) { dirty = false; renderFrame(); }
+  requestAnimationFrame(tick);
+}
+
+function idxAt(t) { const n = sim.t.length; if (t >= tEnd) return n - 1; return Math.min(n - 1, Math.max(0, Math.floor(t * REC_HZ + 1e-6))); }
+function stateAt(t) {
+  const i = idxAt(t), n = sim.t.length;
+  if (i >= n - 1) return { xA: sim.xA[n - 1], xB: sim.xB[n - 1], vA: sim.vA[n - 1], vB: sim.vB[n - 1], f: sim.fA[n - 1] };
+  const t0 = sim.t[i], t1 = sim.t[i + 1], u = t1 > t0 ? Math.min(1, Math.max(0, (t - t0) / (t1 - t0))) : 0;
+  return { xA: sim.xA[i] + (sim.xA[i + 1] - sim.xA[i]) * u, xB: sim.xB[i] + (sim.xB[i + 1] - sim.xB[i]) * u, vA: sim.vA[i], vB: sim.vB[i], f: sim.fA[i] };
+}
+
+function renderFrame() {
+  const ev = firstEv();
+  $('play').textContent = playing ? 'Pause' : (tp >= tEnd - 1e-9 && tp > 0 ? 'Replay' : 'Play');
+  $('scrub').value = tp.toFixed(3);
+  $('tread').textContent = fixed(tp, 3) + ' s';
+  $('banner').hidden = !($('predict').checked && pausedForPredict && !playing && ev && Math.abs(tp - ev.t0) < 1e-6);
+  $('banner').textContent = ev && ev.kind === 'explosion'
+    ? 'Prediction time: the spring is about to release. What will each velocity be once the carts separate? Press Play to find out.'
+    : 'Prediction time: the carts are touching. What will each velocity be after the collision? Press Play to find out.';
+  const s = stateAt(tp);
+  $('rvA').textContent = fixed(s.vA, 3); $('rvB').textContent = fixed(s.vB, 3);
+  $('rp').textContent = fixed(P.mA * s.vA + P.mB * s.vB, 4);
+  $('rke').textContent = fixed(0.5 * P.mA * s.vA * s.vA + 0.5 * P.mB * s.vB * s.vB, 4);
+  drawTrack(s); drawPlot();
+  const ha = hideAfter();
+  if (ha !== renderFrame.lastHide) { renderFrame.lastHide = ha; renderResults(); renderEquations(); }
+}
+
+/* colors */
+function readColors() {
+  const cs = getComputedStyle(document.documentElement), g = n => cs.getPropertyValue(n).trim();
+  C = { ink: g('--ink'), ink2: g('--ink-2'), ink3: g('--ink-3'), rule: g('--rule'), grid: g('--grid'), panel: g('--panel'), soft: g('--soft'),
+        mhi: g('--metal-hi'), m: g('--metal'), mlo: g('--metal-lo'), stop: g('--stop'), a: g('--a'), b: g('--b'), sys: g('--sys'),
+        mono: g('--font-mono'), body: g('--font-body') };
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readColors(); renderLegend(); dirty = true; });
+new MutationObserver(() => { readColors(); renderLegend(); dirty = true; }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
+
+function fitCanvas(cv) {
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+  return [ctx, w, h];
+}
+new ResizeObserver(() => { dirty = true; }).observe($('track'));
+new ResizeObserver(() => { dirty = true; }).observe($('plot'));
+
+/* track drawing */
+function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); }
+function drawTrack(s) {
+  const [ctx, W, H] = fitCanvas($('track'));
+  const stopW = 10, x0 = 18 + stopW, x1 = W - 18 - stopW, sc = (x1 - x0) / TRACK, px = x => x0 + x * sc;
+  const beamTop = Math.round(H * 0.56), beamH = 14;
+  // beam
+  const grad = ctx.createLinearGradient(0, beamTop, 0, beamTop + beamH);
+  grad.addColorStop(0, C.mhi); grad.addColorStop(1, C.mlo);
+  ctx.fillStyle = grad; ctx.fillRect(x0, beamTop, x1 - x0, beamH);
+  ctx.fillStyle = C.mlo;
+  for (let x = 0.02; x < TRACK; x += 0.04) { ctx.beginPath(); ctx.arc(px(x), beamTop + 4, 0.9, 0, 7); ctx.fill(); }
+  ctx.fillStyle = C.stop;
+  rr(ctx, x0 - stopW, beamTop - 22, stopW, beamH + 22, 2); ctx.fill();
+  rr(ctx, x1, beamTop - 22, stopW, beamH + 22, 2); ctx.fill();
+  // ruler (cm)
+  const rTop = beamTop + beamH + 6;
+  ctx.strokeStyle = C.ink3; ctx.fillStyle = C.ink2; ctx.lineWidth = 1;
+  ctx.font = `11px ${C.mono}`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  const minor = sc * 0.01 >= 4 ? 1 : 5, labelStep = sc * 0.1 >= 34 ? 10 : sc * 0.2 >= 34 ? 20 : 50;
+  ctx.beginPath();
+  for (let c = 0; c <= 200; c += minor) {
+    const len = c % 10 === 0 ? 9 : c % 5 === 0 ? 6 : 3, X = Math.round(px(c / 100)) + 0.5;
+    ctx.moveTo(X, rTop); ctx.lineTo(X, rTop + len);
+  }
+  ctx.stroke();
+  for (let c = 0; c <= 200; c += labelStep) ctx.fillText(String(c), px(c / 100), rTop + 11);
+  ctx.textAlign = 'right'; ctx.fillStyle = C.ink3; ctx.fillText('cm', x1 + stopW, rTop + 24);
+
+  // track-end coil springs: the tip follows the cart while it is compressed
+  if (P.ends === 'bounce') {
+    const yb = beamTop - 26 + 17 - 2, minLen = 0.012;
+    const tipL = Math.max(minLen, Math.min(END_SPRING, s.xA - CART_L / 2));
+    const tipR = Math.min(TRACK - minLen, Math.max(TRACK - END_SPRING, s.xB + CART_L / 2));
+    ctx.fillStyle = C.stop; ctx.fillRect(px(0), yb - 10, 4, 20); ctx.fillRect(px(TRACK) - 4, yb - 10, 4, 20);
+    drawSpring(ctx, px(0) + 4, px(tipL), yb, 7);
+    drawSpring(ctx, px(TRACK) - 4, px(tipR), yb, 7);
+  }
+  // compression shared by the two facing bumpers
+  const gapR = s.xB - s.xA - CART_L, mid = (s.xA + CART_L / 2 + s.xB - CART_L / 2) / 2;
+  drawCart(ctx, px, sc, beamTop, s.xA, s.vA, P.mA, C.a, 'A', +1, gapR, mid);
+  drawCart(ctx, px, sc, beamTop, s.xB, s.vB, P.mB, C.b, 'B', -1, gapR, mid);
+  const ev0 = firstEv();
+  if (isExp() && ev0 && tp < ev0.t0) {
+    ctx.fillStyle = C.ink2; ctx.font = `600 11px ${C.body}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(`spring latched · ${fixed(P.E, 3)} J`, px(mid), 52);
+  }
+
+  if ($('showcm').checked) {
+    const xc = (P.mA * s.xA + P.mB * s.xB) / (P.mA + P.mB), X = px(xc), y = beamTop + beamH;
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.moveTo(X, y - 1); ctx.lineTo(X - 6, y + 8); ctx.lineTo(X + 6, y + 8); ctx.closePath(); ctx.fill();
+    ctx.font = `600 10px ${C.body}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText('CM', X + 8, y + 5);
+  }
+}
+function drawSpring(ctx, B, T, yb, coils) {
+  const amp = 5;
+  ctx.strokeStyle = C.ink2; ctx.fillStyle = C.ink2; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(B, yb);
+  for (let j = 1; j <= coils * 2; j++) ctx.lineTo(B + (T - B) * j / (coils * 2 + 1), yb + (j % 2 ? -amp : amp));
+  ctx.lineTo(T, yb); ctx.stroke();
+  ctx.fillRect(T - 1.5, yb - 8, 3, 16);
+}
+function drawCart(ctx, px, sc, beamTop, x, v, m, col, name, face, gap, mid) {
+  const h = CART_L / 2;
+  // body spans the cart minus the bumper on its facing side
+  const bodyL = face > 0 ? x - h : x - h + BUMPER, bodyR = face > 0 ? x + h - BUMPER : x + h;
+  const top = beamTop - 26, bh = 34;
+  const L = px(bodyL), R = px(bodyR);
+  ctx.fillStyle = col; rr(ctx, L, top, R - L, bh, 4); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(L, beamTop + 4, R - L, bh - 30);
+  ctx.fillStyle = '#ffffff'; ctx.font = `600 15px ${C.body}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(name, (L + R) / 2, top + 13);
+  // mass stack, height grows with mass
+  const mh = 4 + 9 * Math.sqrt(m / 0.25) * 1.2, mw = Math.min(R - L - 8, 34);
+  ctx.fillStyle = C.stop; rr(ctx, (L + R) / 2 - mw / 2, top - mh - 1, mw, mh, 2); ctx.fill();
+  ctx.fillStyle = C.ink2; ctx.font = `11px ${C.mono}`; ctx.textBaseline = 'bottom';
+  ctx.fillText(m.toFixed(2) + ' kg', (L + R) / 2, top - mh - 4);
+  // facing bumper
+  const base = face > 0 ? bodyR : bodyL;
+  let tip = face > 0 ? x + h : x - h;
+  if (gap < 0) tip = face > 0 ? Math.max(base, mid) : Math.min(base, mid);
+  const B = px(base), T = px(tip), yb = top + bh / 2 - 2;
+  ctx.strokeStyle = C.ink2; ctx.fillStyle = C.ink2; ctx.lineWidth = 1.5;
+  if (P.model === 'spring') {
+    drawSpring(ctx, B, T, yb, 6);
+  } else {
+    const w = T - B;
+    ctx.fillStyle = eff() === 0 ? C.mlo : C.stop;
+    rr(ctx, Math.min(B, T), yb - 8, Math.abs(w), 16, 2); ctx.fill();
+    if (eff() === 0) { // hatched Velcro pad
+      ctx.strokeStyle = C.panel; ctx.lineWidth = 1; ctx.beginPath();
+      for (let yy = yb - 8; yy < yb + 8; yy += 3) { ctx.moveTo(Math.min(B, T), yy); ctx.lineTo(Math.max(B, T), yy + 2); }
+      ctx.stroke();
+    }
+  }
+  // velocity arrow
+  const cx = px(x), ay = 16, len = v * sc * 0.6;
+  ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 3;
+  if (Math.abs(len) > 3) {
+    const dir = Math.sign(len), end = cx + len;
+    ctx.beginPath(); ctx.moveTo(cx, ay); ctx.lineTo(end - dir * 7, ay); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(end, ay); ctx.lineTo(end - dir * 9, ay - 6); ctx.lineTo(end - dir * 9, ay + 6); ctx.closePath(); ctx.fill();
+  } else { ctx.beginPath(); ctx.arc(cx, ay, 3.5, 0, 7); ctx.fill(); }
+  ctx.fillStyle = C.ink; ctx.font = `12px ${C.mono}`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText(fixed(v, 3) + ' m/s', cx, ay + 10);
+}
+
+/* plotting */
+const QUANT = {
+  v:  { title: 'Velocity vs. time', unit: 'm/s', axis: 'Velocity (m/s)', sys: 'Center-of-mass velocity', d: 3 },
+  p:  { title: 'Momentum vs. time', unit: 'kg·m/s', axis: 'Momentum (kg·m/s)', sys: 'Total momentum', d: 4 },
+  ke: { title: 'Kinetic energy vs. time', unit: 'J', axis: 'Kinetic energy (J)', sys: 'Total kinetic energy', d: 4 },
+  x:  { title: 'Position vs. time', unit: 'm', axis: 'Position of cart center (m)', sys: 'Center-of-mass position', d: 3 },
+  f:  { title: 'Contact force vs. time', unit: 'N', axis: 'Force (N)', sys: null, d: 2 },
+};
+function seriesFor(q) {
+  const mA = P.mA, mB = P.mB, M = mA + mB, S = sim;
+  const out = [];
+  const add = (label, color, get, dash) => out.push({ label, color, get, dash });
+  if (q === 'v') { add('Cart A', C.a, i => S.vA[i]); add('Cart B', C.b, i => S.vB[i]); add(QUANT.v.sys, C.sys, i => (mA * S.vA[i] + mB * S.vB[i]) / M, [6, 4]); }
+  if (q === 'p') { add('Cart A', C.a, i => mA * S.vA[i]); add('Cart B', C.b, i => mB * S.vB[i]); add(QUANT.p.sys, C.sys, i => mA * S.vA[i] + mB * S.vB[i]); }
+  if (q === 'ke') { add('Cart A', C.a, i => 0.5 * mA * S.vA[i] ** 2); add('Cart B', C.b, i => 0.5 * mB * S.vB[i] ** 2); add(QUANT.ke.sys, C.sys, i => 0.5 * mA * S.vA[i] ** 2 + 0.5 * mB * S.vB[i] ** 2); }
+  if (q === 'x') { add('Cart A', C.a, i => S.xA[i]); add('Cart B', C.b, i => S.xB[i]); add(QUANT.x.sys, C.sys, i => (mA * S.xA[i] + mB * S.xB[i]) / M, [6, 4]); }
+  if (q === 'f') { add('Force on cart A', C.a, i => S.fA[i]); add('Force on cart B', C.b, i => -S.fA[i]); }
+  if (!$('showsys').checked || q === 'f') return out.slice(0, 2);
+  return out;
+}
+function setQuantity(q) {
+  quantity = q;
+  document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.q === q)));
+  $('plot-title').textContent = QUANT[q].title;
+  $('showsys-label').textContent = QUANT[q].sys ? 'Show ' + QUANT[q].sys.toLowerCase() : 'Show system line';
+  $('showsys').disabled = !QUANT[q].sys;
+  renderLegend(); dirty = true;
+}
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => setQuantity(b.dataset.q)));
+function renderLegend() {
+  if (!sim) return;
+  $('legend').innerHTML = seriesFor(quantity).map(s =>
+    `<span><span class="line" style="border-top-color:${s.color};${s.dash ? 'border-top-style:dashed' : ''}"></span>${s.label}</span>`).join('');
+}
+$('showsys').addEventListener('change', renderLegend);
+
+function niceStep(span, count) {
+  const raw = span / count, mag = Math.pow(10, Math.floor(Math.log10(raw))), r = raw / mag;
+  return (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10) * mag;
+}
+let plotGeom = null;
+function drawPlot() {
+  const [ctx, W, H] = fitCanvas($('plot'));
+  const ser = seriesFor(quantity), n = sim.t.length;
+  const ev = firstEv();
+  const iNow = idxAt(tp);
+  const predictHide = $('predict').checked;
+  const ghost = $('ghost').checked && !predictHide;
+  // x range
+  let ta = 0, tb = Math.max(tEnd, 0.001);
+  if ($('zoom').checked && ev) {
+    const pad = P.model === 'spring' ? Math.max(0.03, 2.5 * (ev.t1 - ev.t0)) : 0.3;
+    ta = Math.max(0, ev.t0 - pad); tb = Math.min(tEnd, ev.t1 + pad);
+    if (tb - ta < 0.01) tb = ta + 0.01;
+  }
+  const ia = Math.max(0, Math.floor(ta * REC_HZ) - 1), ib = Math.min(n - 1, Math.ceil(tb * REC_HZ) + 1);
+  // y range from the full run in view (so the axis doesn't jump during playback)
+  const yMaxIdx = predictHide ? Math.min(ib, iNow) : ib;
+  let lo = 0, hi = 0;
+  for (const s of ser) for (let i = ia; i <= yMaxIdx; i++) { const v = s.get(i); if (v < lo) lo = v; if (v > hi) hi = v; }
+  if (quantity === 'x') { lo = 0; hi = TRACK; }
+  if (hi - lo < 1e-9) { hi = lo + 1; }
+  const padY = (hi - lo) * 0.08; if (quantity !== 'x') { if (lo < 0) lo -= padY; hi += padY; }
+  const ml = 62, mr = 14, mt = 10, mb = 38, pw = W - ml - mr, ph = H - mt - mb;
+  const ys = niceStep(hi - lo, ph > 220 ? 6 : 4);
+  lo = Math.floor(lo / ys - 1e-9) * ys; hi = Math.ceil(hi / ys - 1e-9) * ys;
+  const X = t => ml + (t - ta) / (tb - ta) * pw, Y = v => mt + (hi - v) / (hi - lo) * ph;
+  plotGeom = { ml, mr, mt, mb, pw, ph, ta, tb, X, Y, ser };
+  // grid
+  ctx.font = `11px ${C.mono}`; ctx.lineWidth = 1;
+  const yd = Math.max(0, -Math.floor(Math.log10(ys) + 1e-9));
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let v = lo; v <= hi + ys * 1e-6; v += ys) {
+    const y = Math.round(Y(v)) + 0.5;
+    ctx.strokeStyle = Math.abs(v) < ys * 1e-6 ? C.ink3 : C.grid;
+    ctx.beginPath(); ctx.moveTo(ml, y); ctx.lineTo(ml + pw, y); ctx.stroke();
+    ctx.fillStyle = C.ink2; ctx.fillText(fixed(v, yd), ml - 6, y);
+  }
+  const xs = niceStep(tb - ta, pw > 500 ? 10 : 5), xd = Math.max(0, -Math.floor(Math.log10(xs) + 1e-9));
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let t = Math.ceil(ta / xs - 1e-9) * xs; t <= tb + xs * 1e-6; t += xs) {
+    const x = Math.round(X(t)) + 0.5;
+    ctx.strokeStyle = C.grid; ctx.beginPath(); ctx.moveTo(x, mt); ctx.lineTo(x, mt + ph); ctx.stroke();
+    ctx.fillStyle = C.ink2; ctx.fillText(fixed(t, xd), x, mt + ph + 5);
+  }
+  ctx.strokeStyle = C.ink3; ctx.beginPath(); ctx.moveTo(ml + 0.5, mt); ctx.lineTo(ml + 0.5, mt + ph); ctx.stroke();
+  ctx.fillStyle = C.ink2; ctx.font = `12px ${C.body}`;
+  ctx.fillText('Time (s)', ml + pw / 2, mt + ph + 21);
+  ctx.save(); ctx.translate(13, mt + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'middle'; ctx.fillText(QUANT[quantity].axis, 0, 0); ctx.restore();
+  // collision band
+  if (ev && !(predictHide && tp < ev.t0)) {
+    ctx.fillStyle = C.soft; const xa = X(ev.t0), xb = Math.max(X(ev.t1), xa + 1.5);
+    if (xb > ml && xa < ml + pw) { ctx.fillRect(Math.max(ml + 1, xa), mt, Math.min(xb, ml + pw) - Math.max(ml + 1, xa), ph); }
+  }
+  // series
+  ctx.save(); ctx.beginPath(); ctx.rect(ml, mt - 2, pw, ph + 4); ctx.clip();
+  const line = (s, i0, i1, alpha) => {
+    if (i1 < i0) return;
+    ctx.globalAlpha = alpha; ctx.strokeStyle = s.color; ctx.lineWidth = 2; ctx.setLineDash(s.dash || []);
+    ctx.lineJoin = 'round'; ctx.beginPath();
+    const stride = Math.max(1, Math.floor((i1 - i0) / (pw * 3)));
+    for (let i = i0; i <= i1; i += stride) { const x = X(sim.t[i]), y = Y(s.get(i)); i === i0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+    ctx.lineTo(X(sim.t[i1]), Y(s.get(i1)));
+    ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+  };
+  // draw system line first so cart lines sit on top
+  const order = ser.length === 3 ? [ser[2], ser[0], ser[1]] : ser;
+  if (ghost) for (const s of order) line(s, ia, ib, 0.22);
+  for (const s of order) line(s, ia, Math.min(ib, iNow), 1);
+  for (const s of order) { if (iNow >= ia && iNow <= ib) { ctx.fillStyle = s.color; ctx.beginPath(); ctx.arc(X(sim.t[iNow]), Y(s.get(iNow)), 3.5, 0, 7); ctx.fill(); } }
+  ctx.restore();
+  // hover crosshair
+  const tip = $('tip');
+  if (hover) {
+    const limit = predictHide ? iNow : (ghost ? n - 1 : iNow);
+    let t = ta + (hover.x - ml) / pw * (tb - ta);
+    let i = Math.min(limit, Math.max(0, Math.round(t * REC_HZ)));
+    if (i > n - 1) i = n - 1;
+    const x = X(sim.t[i]);
+    if (x >= ml - 1 && x <= ml + pw + 1) {
+      ctx.strokeStyle = C.ink3; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, mt); ctx.lineTo(Math.round(x) + 0.5, mt + ph); ctx.stroke();
+      for (const s of ser) { ctx.fillStyle = s.color; ctx.strokeStyle = C.panel; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, Y(s.get(i)), 4.5, 0, 7); ctx.fill(); ctx.stroke(); }
+      const q = QUANT[quantity];
+      tip.innerHTML = `<div style="color:var(--ink-2)">t = ${fixed(sim.t[i], 3)} s</div>` + ser.map(s =>
+        `<div><span class="sw" style="background:${s.color}"></span>${s.label}: ${fixed(s.get(i), q.d)} ${q.unit}</div>`).join('');
+      tip.hidden = false;
+      const tw = tip.offsetWidth, left = x + 14 + tw > W ? x - 14 - tw : x + 14;
+      tip.style.left = Math.max(0, left) + 'px'; tip.style.top = (mt + 6) + 'px';
+    } else tip.hidden = true;
+  } else tip.hidden = true;
+}
+const plotEl = $('plot');
+plotEl.addEventListener('pointermove', e => { const r = plotEl.getBoundingClientRect(); hover = { x: e.clientX - r.left }; dirty = true; });
+plotEl.addEventListener('pointerleave', () => { hover = null; dirty = true; });
+
+/* results */
+function renderResults() {
+  const box = $('results'), ev = firstEv(), mA = P.mA, mB = P.mB;
+  $('res-note').textContent = P.model === 'spring' ? 'Values measured from the simulation' : '';
+  if (!ev) {
+    const why = P.vA <= P.vB && P.ends === 'stop'
+      ? `Cart A (${fixed(P.vA, 2)} m/s) never gains on cart B (${fixed(P.vB, 2)} m/s), so they cannot meet. Give cart A a larger velocity than cart B.`
+      : 'The run ended before the carts met. Try a longer run, higher speeds, or carts that start closer together.';
+    box.innerHTML = `<div class="empty">No collision in this run. ${why}</div>`;
+    return;
+  }
+  const hide = hideAfter();
+  const H = v => hide ? '?' : v;
+  const pA0 = mA * ev.vA0, pB0 = mB * ev.vB0, pA1 = mA * ev.vA1, pB1 = mB * ev.vB1;
+  const K = (m, v) => 0.5 * m * v * v;
+  const kA0 = K(mA, ev.vA0), kB0 = K(mB, ev.vB0), kA1 = K(mA, ev.vA1), kB1 = K(mB, ev.vB1);
+  const rows = [
+    ['Velocity of A, <i>v</i><sub>A</sub> (m/s)', ev.vA0, ev.vA1, 3],
+    ['Velocity of B, <i>v</i><sub>B</sub> (m/s)', ev.vB0, ev.vB1, 3],
+    ['Momentum of A, <i>p</i><sub>A</sub> (kg·m/s)', pA0, pA1, 4],
+    ['Momentum of B, <i>p</i><sub>B</sub> (kg·m/s)', pB0, pB1, 4],
+    ['Total momentum (kg·m/s)', pA0 + pB0, pA1 + pB1, 4, 'total'],
+    ['Kinetic energy of A (J)', kA0, kA1, 4],
+    ['Kinetic energy of B (J)', kB0, kB1, 4],
+    ['Total kinetic energy (J)', kA0 + kB0, kA1 + kB1, 4, 'total'],
+  ];
+  let html = `<div class="results-grid"><div class="tablewrap"><table><thead><tr><th>Quantity</th><th>Before</th><th>After</th><th>Change</th></tr></thead><tbody>`;
+  for (const [label, b, a, d, cls] of rows) {
+    html += `<tr class="${cls || ''}"><td>${label}</td><td class="num">${fixed(b, d)}</td><td class="num">${H(fixed(a, d))}</td><td class="num">${H(signed(a - b, d))}</td></tr>`;
+  }
+  html += `</tbody></table></div><div class="checks">`;
+  const p0 = pA0 + pB0, p1 = pA1 + pB1, k0 = kA0 + kB0, k1 = kA1 + kB1;
+  const exp = ev.kind === 'explosion';
+  const approach = ev.vA0 - ev.vB0;
+  const eMeas = approach > 0 ? (ev.vB1 - ev.vA1) / approach : NaN;
+  const chk = (k, v, note) => `<div class="check"><span class="k">${k}</span><span class="v">${v}</span>${note ? `<span class="note">${note}</span>` : ''}</div>`;
+  html += chk('Change in total momentum', H(signed(p1 - p0, 5) + ' kg·m/s'), 'Zero: momentum is conserved because no external horizontal force acts.');
+  if (exp) {
+    html += chk('Kinetic energy gained', H(signed(k1 - k0, 4) + ' J'), `Supplied by the spring, which stored ${fixed(P.E, 4)} J.`);
+    html += chk('Speed ratio |v<sub>B</sub>′| / |v<sub>A</sub>′|', H(fixed(Math.abs(ev.vB1 / ev.vA1), 3)), `Equals m<sub>A</sub> / m<sub>B</sub> = ${fixed(mA / mB, 3)}: the lighter cart moves faster.`);
+  } else {
+  html += chk('Kinetic energy kept', H(k0 > 0 ? fixed(100 * k1 / k0, 2) + ' %' : '—'), hide ? '' : (k0 - k1 > 1e-9 ? `${fixed(k0 - k1, 4)} J became heat, sound, and bumper deformation.` : 'No kinetic energy lost.'));
+  html += chk('Coefficient of restitution', H(fixed(eMeas, 3)), '<i>e</i> = (<i>v</i><sub>B</sub>′ − <i>v</i><sub>A</sub>′) / (<i>v</i><sub>A</sub> − <i>v</i><sub>B</sub>)');
+  }
+  html += chk('Impulse on A / on B', H(`${signed(pA1 - pA0, 4)} / ${signed(pB1 - pB0, 4)} N·s`), 'Equal size, opposite direction (Newton’s third law).');
+  if (P.model === 'spring') {
+    const [fa, fb] = exp ? explosionVelocities(mA, mB, P.E) : finalVelocities(mA, ev.vA0, mB, ev.vB0, eff());
+    const err = Math.max(Math.abs(fa - ev.vA1), Math.abs(fb - ev.vB1));
+    html += chk(exp ? 'Push time' : 'Contact time', H(fixed((ev.t1 - ev.t0) * 1000, 1) + ' ms'), '');
+    html += chk('Peak contact force', H(fixed(ev.Fmax, 2) + ' N'), hide ? '' : `Area under the force curve, ∫F dt = ${fixed(ev.J, 4)} N·s, equals the change in momentum of B.`);
+    html += chk('Agreement with ideal formula', H('±' + (err < 5e-6 ? '0.00001' : fixed(err, 5)) + ' m/s'), 'Largest difference between simulated and formula final velocities.');
+    if (ev.dmax > 2 * BUMPER && !hide) html += `<div class="check" style="background:var(--warn-bg);color:var(--warn-ink)">The bumpers compressed ${fixed(ev.dmax * 100, 1)} cm, more than their ${fixed(2 * BUMPER * 100, 1)} cm of travel. Real carts would bottom out. Raise the bumper stiffness or lower the speeds.</div>`;
+  }
+  if (sim.endMax > END_SPRING) html += `<div class="check" style="background:var(--warn-bg);color:var(--warn-ink)">An end spring was squeezed flat (coil bind), so the cart hit the stop hard. Use a stiffer end spring or lower speeds.</div>`;
+  if (sim.events.length > 1 && !hide) html += `<div class="check"><span class="k">This run has ${sim.events.length} cart-to-cart collisions; the table shows the first.</span></div>`;
+  html += `</div></div>`;
+  box.innerHTML = html;
+}
+
+/* equations with this run's numbers */
+function renderEquations() {
+  const ev = firstEv(), mA = P.mA, mB = P.mB, e = eff(), hide = hideAfter();
+  const uA = ev ? ev.vA0 : P.vA, uB = ev ? ev.vB0 : P.vB;
+  const f = (x, d = 3) => fixed(x, d), par = x => x < 0 ? `(${f(x)})` : f(x);
+  const [fa, fb] = finalVelocities(mA, uA, mB, uB, e);
+  const M = mA + mB, Ptot = mA * uA + mB * uB;
+  const ans = x => hide ? '?' : f(x);
+  if (isExp()) {
+    const [ea, eb] = explosionVelocities(mA, mB, P.E);
+    $('eqs').innerHTML = `<div class="eq"><h3>Conservation of momentum (starts at zero)</h3>
+      <div class="f">0 = m<sub>A</sub>v<sub>A</sub>′ + m<sub>B</sub>v<sub>B</sub>′ &nbsp;→&nbsp; v<sub>A</sub>′ / v<sub>B</sub>′ = −m<sub>B</sub> / m<sub>A</sub></div>
+      <div class="f sub2">v<sub>A</sub>′ / v<sub>B</sub>′ = −${f(mB, 2)} / ${f(mA, 2)} = ${f(-mB / mA, 3)}</div></div>
+    <div class="eq"><h3>Energy: the spring's stored energy becomes kinetic energy</h3>
+      <div class="f">E = ½m<sub>A</sub>v<sub>A</sub>′² + ½m<sub>B</sub>v<sub>B</sub>′² = ${f(P.E, 3)} J</div></div>
+    <div class="eq"><h3>Final velocities</h3>
+      <div class="f">v<sub>A</sub>′ = −√[2E·m<sub>B</sub> / (m<sub>A</sub>(m<sub>A</sub> + m<sub>B</sub>))]</div>
+      <div class="f sub2">v<sub>A</sub>′ = −√[2(${f(P.E, 3)})(${f(mB, 2)}) / ((${f(mA, 2)})(${f(M, 2)}))] = ${ans(ea)} m/s</div>
+      <div class="f">v<sub>B</sub>′ = +√[2E·m<sub>A</sub> / (m<sub>B</sub>(m<sub>A</sub> + m<sub>B</sub>))]</div>
+      <div class="f sub2">v<sub>B</sub>′ = √[2(${f(P.E, 3)})(${f(mA, 2)}) / ((${f(mB, 2)})(${f(M, 2)}))] = ${ans(eb)} m/s</div></div>
+    <div class="eq"><h3>Center of mass stays put</h3>
+      <div class="f">v<sub>cm</sub> = (m<sub>A</sub>v<sub>A</sub>′ + m<sub>B</sub>v<sub>B</sub>′) / (m<sub>A</sub> + m<sub>B</sub>) = 0 m/s</div>
+      <div class="f sub2">Turn on “Show center of mass” to see that it never moves.</div></div>`;
+    $('model-note').textContent = P.model === 'spring'
+      ? `Realistic spring: the latched spring has stiffness k = ${P.k} N/m and is compressed ${fixed(Math.sqrt(2 * P.E / P.k) * 100, 2)} cm, so it stores E = ½kd² = ${fixed(P.E, 3)} J. After release it pushes A left and B right with equal and opposite forces until it reaches its natural length.`
+      : 'Ideal spring: all of the stored energy is released in an instant at the moment the latch opens.';
+    return;
+  }
+  let html = `<div class="eq"><h3>Conservation of momentum</h3>
+    <div class="f">m<sub>A</sub>v<sub>A</sub> + m<sub>B</sub>v<sub>B</sub> = m<sub>A</sub>v<sub>A</sub>′ + m<sub>B</sub>v<sub>B</sub>′</div>
+    <div class="f sub2">(${f(mA, 2)})${par(uA)} + (${f(mB, 2)})${par(uB)} = ${f(Ptot, 4)} kg·m/s</div></div>`;
+  if (e === 0) {
+    html += `<div class="eq"><h3>Completely inelastic: common final velocity</h3>
+      <div class="f">v′ = (m<sub>A</sub>v<sub>A</sub> + m<sub>B</sub>v<sub>B</sub>) / (m<sub>A</sub> + m<sub>B</sub>)</div>
+      <div class="f sub2">v′ = ${f(Ptot, 4)} / ${f(M, 2)} = ${ans(fa)} m/s</div></div>`;
+  } else if (e === 1) {
+    html += `<div class="eq"><h3>Perfectly elastic: final velocities</h3>
+      <div class="f">v<sub>A</sub>′ = [(m<sub>A</sub> − m<sub>B</sub>)v<sub>A</sub> + 2m<sub>B</sub>v<sub>B</sub>] / (m<sub>A</sub> + m<sub>B</sub>)</div>
+      <div class="f sub2">v<sub>A</sub>′ = [(${f(mA - mB, 2)})${par(uA)} + 2(${f(mB, 2)})${par(uB)}] / ${f(M, 2)} = ${ans(fa)} m/s</div>
+      <div class="f">v<sub>B</sub>′ = [(m<sub>B</sub> − m<sub>A</sub>)v<sub>B</sub> + 2m<sub>A</sub>v<sub>A</sub>] / (m<sub>A</sub> + m<sub>B</sub>)</div>
+      <div class="f sub2">v<sub>B</sub>′ = [(${f(mB - mA, 2)})${par(uB)} + 2(${f(mA, 2)})${par(uA)}] / ${f(M, 2)} = ${ans(fb)} m/s</div></div>`;
+  } else {
+    html += `<div class="eq"><h3>Partially elastic (e = ${f(e, 2)}): final velocities</h3>
+      <div class="f">v<sub>A</sub>′ = [m<sub>A</sub>v<sub>A</sub> + m<sub>B</sub>v<sub>B</sub> + m<sub>B</sub>e(v<sub>B</sub> − v<sub>A</sub>)] / (m<sub>A</sub> + m<sub>B</sub>)</div>
+      <div class="f sub2">v<sub>A</sub>′ = [${f(Ptot, 4)} + (${f(mB, 2)})(${f(e, 2)})${par(uB - uA)}] / ${f(M, 2)} = ${ans(fa)} m/s</div>
+      <div class="f">v<sub>B</sub>′ = [m<sub>A</sub>v<sub>A</sub> + m<sub>B</sub>v<sub>B</sub> + m<sub>A</sub>e(v<sub>A</sub> − v<sub>B</sub>)] / (m<sub>A</sub> + m<sub>B</sub>)</div>
+      <div class="f sub2">v<sub>B</sub>′ = [${f(Ptot, 4)} + (${f(mA, 2)})(${f(e, 2)})${par(uA - uB)}] / ${f(M, 2)} = ${ans(fb)} m/s</div></div>`;
+  }
+  const k0 = 0.5 * mA * uA * uA + 0.5 * mB * uB * uB, k1 = 0.5 * mA * fa * fa + 0.5 * mB * fb * fb;
+  html += `<div class="eq"><h3>Kinetic energy</h3>
+    <div class="f">KE = ½m<sub>A</sub>v<sub>A</sub>² + ½m<sub>B</sub>v<sub>B</sub>²</div>
+    <div class="f sub2">Before: ${f(k0, 4)} J &nbsp; After: ${hide ? '?' : f(k1, 4)} J</div>
+    <div class="f">KE lost = ½·μ·(1 − e²)·(v<sub>A</sub> − v<sub>B</sub>)², &nbsp;μ = m<sub>A</sub>m<sub>B</sub>/(m<sub>A</sub> + m<sub>B</sub>)</div>
+    <div class="f sub2">KE lost = ½(${f(mA * mB / M, 4)})(${f(1 - e * e, 4)})${par(uA - uB)}² = ${hide ? '?' : f(0.5 * (mA * mB / M) * (1 - e * e) * (uA - uB) ** 2, 4)} J</div></div>`;
+  html += `<div class="eq"><h3>Center-of-mass velocity (unchanged by the collision)</h3>
+    <div class="f">v<sub>cm</sub> = (m<sub>A</sub>v<sub>A</sub> + m<sub>B</sub>v<sub>B</sub>) / (m<sub>A</sub> + m<sub>B</sub>)</div>
+    <div class="f sub2">v<sub>cm</sub> = ${f(Ptot, 4)} / ${f(M, 2)} = ${f(Ptot / M, 3)} m/s</div></div>`;
+  $('eqs').innerHTML = html;
+  $('model-note').textContent = P.model === 'spring'
+    ? `Realistic bumpers: while compressed by d, the bumpers push the carts apart with F = k·d (k = ${P.k} N/m). They unload along a steeper line (slope k/e²), so the bumpers return exactly e² of the stored energy. The motion is integrated numerically in steps of a few microseconds; momentum is conserved exactly because the force on A is always equal and opposite to the force on B. ${P.ends === 'bounce' ? ` The track-end coil springs (k = ${P.kEnd} N/m, ${END_SPRING * 100} cm long) are elastic. While a cart is on one, the track exerts an external force, so total momentum changes during a wall bounce, as it should.` : ''}`
+    : 'Ideal bumpers: the collision takes zero time. The simulation solves for the exact moment of contact and applies the formulas above, so the results are exact.' + (P.ends === 'bounce' ? ' Carts rebound off the end springs instantly and elastically.' : '');
+}
+
+/* export */
+const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+if (inFrame) $('dl-csv').hidden = true;
+function buildTable(sep) {
+  const rate = parseFloat($('rate').value), step = Math.max(1, Math.round(REC_HZ / rate));
+  const spring = P.model === 'spring', mA = P.mA, mB = P.mB, S = sim;
+  const lines = [];
+  if ($('hdr').checked) {
+    const typ = P.type === 'elastic' ? 'perfectly elastic' : P.type === 'inelastic' ? 'completely inelastic' : isExp() ? `explosion from rest, spring energy ${P.E} J` : 'partially elastic';
+    lines.push(['Air Track Collision Lab'].join(sep));
+    lines.push(['m_A (kg)', mA, 'u_A (m/s)', isExp() ? 0 : P.vA, 'x_A0 (m)', P.xA].join(sep));
+    lines.push(['m_B (kg)', mB, 'u_B (m/s)', isExp() ? 0 : P.vB, 'x_B0 (m)', P.xB].join(sep));
+    lines.push(['collision', typ, 'e', eff(), 'bumpers', spring ? `spring k=${P.k} N/m` : 'ideal'].join(sep));
+    lines.push(['sample rate (Hz)', rate].join(sep));
+    lines.push('');
+  }
+  const head = ['t (s)', 'x_A (m)', 'v_A (m/s)', 'x_B (m)', 'v_B (m/s)', 'p_A (kg*m/s)', 'p_B (kg*m/s)', 'p_total (kg*m/s)', 'KE_A (J)', 'KE_B (J)', 'KE_total (J)'];
+  if (spring) head.push('F_on_A (N)', 'F_on_B (N)');
+  lines.push(head.join(sep));
+  const n = S.t.length;
+  for (let i = 0; i < n; i += step) {
+    // drop an off-grid final sample so the spacing stays uniform
+    if (Math.abs(S.t[i] * rate - Math.round(S.t[i] * rate)) > 1e-6) continue;
+    const vA = S.vA[i], vB = S.vB[i], pA = mA * vA, pB = mB * vB, kA = 0.5 * mA * vA * vA, kB = 0.5 * mB * vB * vB;
+    const row = [S.t[i].toFixed(3), S.xA[i].toFixed(4), vA.toFixed(4), S.xB[i].toFixed(4), vB.toFixed(4),
+      pA.toFixed(5), pB.toFixed(5), (pA + pB).toFixed(5), kA.toFixed(5), kB.toFixed(5), (kA + kB).toFixed(5)];
+    if (spring) row.push(S.fA[i].toFixed(3), (-S.fA[i]).toFixed(3));
+    lines.push(row.map(v => v === '-0.0000' || /^-0\.0+$/.test(v) ? v.slice(1) : v).join(sep));
+  }
+  return { text: lines.join('\n') + '\n', rows: lines.length - 1 - ($('hdr').checked ? 6 : 0) };
+}
+function buildExport() { $('csvtext').value = buildTable(',').text; }
+['rate', 'hdr'].forEach(id => $(id).addEventListener('change', buildExport));
+async function copyText(text, rows, what) {
+  try { await navigator.clipboard.writeText(text); $('status').textContent = `Copied ${rows} rows ${what}. Paste into your graphing software.`; }
+  catch (e) {
+    $('preview').open = true; const ta = $('csvtext'); ta.value = text; ta.focus(); ta.select();
+    $('status').textContent = 'Your browser blocked automatic copying. The data is selected below: press Ctrl+C (⌘C on a Mac) to copy it.';
+  }
+}
+$('copy-tsv').addEventListener('click', () => { const r = buildTable('\t'); copyText(r.text, r.rows, 'as tab-separated columns'); });
+$('copy-csv').addEventListener('click', () => { const r = buildTable(','); copyText(r.text, r.rows, 'as CSV'); });
+$('dl-csv').addEventListener('click', () => {
+  const r = buildTable(','), url = URL.createObjectURL(new Blob([r.text], { type: 'text/csv' }));
+  const a = document.createElement('a'); a.href = url; a.download = `air-track-run-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  $('status').textContent = `Downloaded ${r.rows} rows.`;
+});
+
+/* boot */
+readColors(); syncInputs(); run(); setQuantity('v');
+if (document.fonts) document.fonts.ready.then(() => { readColors(); dirty = true; });
+requestAnimationFrame(tick);
+</script>
+
+</body>
+</html>

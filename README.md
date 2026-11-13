@@ -11,8 +11,9 @@ Everything runs in the browser: no installs or accounts needed.
 | [Vector Range](https://jlgagnon-glitch.github.io/Physics-Simulations/vectors.html) | Vectors: components, addition, subtraction (Lectures 3–4) | 20 problems |
 | [Motion Graphs Lab](https://jlgagnon-glitch.github.io/Physics-Simulations/motion-graphs.html) | Reading position and velocity graphs (Lecture 6) | 20 questions |
 | [Constant Acceleration Lab](https://jlgagnon-glitch.github.io/Physics-Simulations/kinematics.html) | One-dimensional motion with constant acceleration (Lecture 7) | 20 questions |
+| [Air Track Collision Lab](https://jlgagnon-glitch.github.io/Physics-Simulations/air-track.html) | Collisions and explosions: momentum, kinetic energy, coefficient of restitution | Open lab with presets and data export |
 
-All four on one page: **https://jlgagnon-glitch.github.io/Physics-Simulations/**
+All of them on one page: **https://jlgagnon-glitch.github.io/Physics-Simulations/**
 
 MyOpenMath code for each simulation: [Proving Ground](proving-ground-myopenmath.md) ·
 [Vector Range](vectors-myopenmath.md) · [Motion Graphs Lab](motion-graphs-myopenmath.md) ·
